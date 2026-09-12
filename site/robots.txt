@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /i-lista-mou/
 Sitemap: https://kmyrillas.gr/sitemap.xml

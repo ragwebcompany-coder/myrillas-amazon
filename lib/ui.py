@@ -127,11 +127,18 @@ def poster(title, kicker="", color="#1399FF"):
 
 
 # ── head / chrome ────────────────────────────────────────────────────────────
-def head(*, title, desc, depth, canonical, jsonld=None, body_class="", og_image=None, kind="website"):
+def head(*, title, desc, depth, canonical, jsonld=None, body_class="", og_image=None, kind="website", noindex=False):
     r = rel(depth)
     ld = "".join('<script type="application/ld+json">' + json.dumps(b, ensure_ascii=False, separators=(",", ":"))
                  + "</script>\n" for b in (jsonld or []))
-    og = f"{SITE['domain']}/assets/img/{og_image}" if og_image else f"{SITE['domain']}/assets/img/og-default.jpg"
+    img_name = og_image or "og-default.jpg"
+    og = f"{SITE['domain']}/assets/img/{img_name}"
+    dims = (1200, 630) if not og_image else img_size(og_image)
+    og_type = "image/png" if img_name.lower().endswith(".png") else "image/jpeg"
+    og_dims = (f'<meta property="og:image:width" content="{dims[0]}">\n<meta property="og:image:height" content="{dims[1]}">\n'
+               if dims else "")
+    robots = ("noindex, follow" if noindex else
+              "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1")
     return f'''<!doctype html>
 <html lang="el" class="no-js">
 <head>
@@ -139,6 +146,7 @@ def head(*, title, desc, depth, canonical, jsonld=None, body_class="", og_image=
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{html.escape(title)}</title>
 <meta name="description" content="{html.escape(desc, quote=True)}">
+<meta name="robots" content="{robots}">
 <meta name="theme-color" content="#0F171E">
 <meta name="color-scheme" content="dark">
 <link rel="canonical" href="{SITE['domain']}/{canonical}">
@@ -155,6 +163,8 @@ def head(*, title, desc, depth, canonical, jsonld=None, body_class="", og_image=
 <meta property="og:description" content="{html.escape(desc, quote=True)}">
 <meta property="og:url" content="{SITE['domain']}/{canonical}">
 <meta property="og:image" content="{og}">
+{og_dims}<meta property="og:image:type" content="{og_type}">
+<meta property="og:image:alt" content="{html.escape(title, quote=True)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@KMyrillas">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -254,6 +264,7 @@ def footer(depth):
   </div>
   <p class="ft__disclaimer">Το περιεχόμενο είναι ενημερωτικό και δεν υποκαθιστά την ιατρική εξέταση.
     Κάθε περιστατικό αξιολογείται ξεχωριστά στο ιατρείο.</p>
+  <p class="ft__credit">Made by <a href="https://clinicbrain.gr" rel="noopener" target="_blank">CLINICBRAIN</a></p>
 </footer>'''
 
 

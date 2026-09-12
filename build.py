@@ -32,8 +32,8 @@ def write(path, markup):
         f.write(markup)
 
 
-def register(url, prio="0.6", freq="monthly"):
-    PAGES.append((url, prio, freq))
+def register(url, prio="0.6", freq="monthly", lastmod=None):
+    PAGES.append((url, prio, freq, lastmod or TODAY))
 
 
 def index(url, *, title, desc, kind, img=None, kw="", video=None, xray=None):
@@ -83,13 +83,13 @@ def base_graph():
 
 # ── shell ────────────────────────────────────────────────────────────────────
 def shell(*, path, title, desc, depth, body, active="", jsonld=None, body_class="", og_image=None,
-          page_meta=None, kind="website"):
+          page_meta=None, kind="website", noindex=False):
     ld = [base_graph()] + list(jsonld or [])
     extra = ""
     if page_meta:
         extra = f'<script>window.__PAGE={json.dumps(page_meta, ensure_ascii=False, separators=(",", ":"))}</script>'
     return (U.head(title=title, desc=desc, depth=depth, canonical=path, jsonld=ld, body_class=body_class,
-                   og_image=og_image, kind=kind)
+                   og_image=og_image, kind=kind, noindex=noindex)
             + U.topbar(depth, active) + body + U.footer(depth) + U.tail(depth, extra_js=extra))
 
 
@@ -198,9 +198,10 @@ def build_home():
 {guide_data()}'''
     desc = ("Γυναικολόγος - Μαιευτήρας Χειρουργός Κωνσταντίνος Μυρίλλας με ιατρείο στην Αθήνα, εξειδικεύεται "
             "στη ρομποτική, λαπαροσκοπική και αισθητική χειρουργική.")
+    # og_image=None -> πέφτει στο og-default.jpg (1200x630, σωστά κομμένο από την ίδια φωτογραφία),
+    # που δείχνει σωστά σε Facebook/Twitter/LinkedIn· το πρωτότυπο 2021-11-myr.jpg είναι πολύ πλατύ (1920x493).
     write("index.html", shell(path="", title="Γυναικολόγος - Μαιευτήρας Χειρουργός Αθήνα Κων/νος Μυρίλλας",
-                              desc=desc, depth=d, body=body, active="home", body_class="is-home",
-                              og_image="2021-11-myr.jpg"))
+                              desc=desc, depth=d, body=body, active="home", body_class="is-home"))
     register("", "1.0", "weekly")
     index("", title="Αρχική", desc="Όλα τα θέματα, τα βίντεο και ο γιατρός", kind="page", kw="αρχικη home")
 
@@ -402,7 +403,7 @@ def build_article(a):
           desc=(r["meta"] or r["lead"])[:158], depth=d, body=body, active="blog", jsonld=[ld, crumb_ld],
           og_image=r["image"], kind="article",
           page_meta={"t": a["title"], "u": f"{slug}/", "img": r["image"], "k": f"Άρθρο · {a['tag']}"}))
-    register(f"{slug}/", "0.6")
+    register(f"{slug}/", "0.6", lastmod=r["mod"] or r["pub"] or None)
     index(f"{slug}/", title=a["title"], desc=f"Άρθρο · {a['tag']}", kind="article", img=r["image"],
           kw=plain(r["body"])[:400], xray=xray)
 
@@ -649,8 +650,9 @@ def build_mylist():
   </div></div></section>
 <main id="main"><section class="sec sec--tight"><div class="wrap"><div data-mylist></div></div></section>{U.cta_band(d)}</main>'''
     write("i-lista-mou/index.html", shell(path="i-lista-mou/", title="Η λίστα μου | Κ. Μυρίλλας",
-          desc="Τα θέματα και τα άρθρα που κρατήσατε. Αποθηκεύονται τοπικά στη συσκευή σας.", depth=d, body=body, jsonld=[crumb_ld]))
-    register("i-lista-mou/", "0.2")
+          desc="Τα θέματα και τα άρθρα που κρατήσατε. Αποθηκεύονται τοπικά στη συσκευή σας.", depth=d, body=body,
+          jsonld=[crumb_ld], noindex=True))
+    # Δεν καταχωρείται στο sitemap: προσωπικό περιεχόμενο ανά συσκευή, χωρίς μοναδική αξία για crawlers.
 
 
 def build_terms():
@@ -687,7 +689,7 @@ def build_404():
     <a class="btn btn--ghost btn--lg" href="/services/">Όλα τα θέματα</a><a class="btn btn--ghost btn--lg" href="/">Αρχική</a></div>
   </div></div></section><main id="main"></main>'''
     write("404.html", shell(path="404.html", title="Η σελίδα δεν βρέθηκε | Κ. Μυρίλλας", desc="Η σελίδα δεν βρέθηκε.",
-                            depth=d, body=body).replace('href="assets/', 'href="/assets/').replace('src="assets/', 'src="/assets/'))
+                            depth=d, body=body, noindex=True).replace('href="assets/', 'href="/assets/').replace('src="assets/', 'src="/assets/'))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -761,21 +763,27 @@ def redirects():
             else:
                 f.write(f"Redirect 301 {a.rstrip('/')} {b}\n")
         f.write("ErrorDocument 404 /404.html\n")
-    vercel = {"$schema": "https://openapi.vercel.sh/vercel.json", "trailingSlash": True, "cleanUrls": False,
+    vercel = {"$schema": "https://openapi.vercel.sh/vercel.json", "outputDirectory": "site",
+              "trailingSlash": True, "cleanUrls": False,
               "redirects": [{"source": a, "destination": b, "permanent": True} for a, b in old],
               "headers": [{"source": "/assets/(img|docs)/(.*)", "headers": [{"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}]},
                           {"source": "/assets/(css|js)/(.*)", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, must-revalidate"}]},
                           {"source": "/(.*)", "headers": [{"key": "X-Content-Type-Options", "value": "nosniff"},
                                                           {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"}]}]}
-    with open(os.path.join(OUT, "vercel.json"), "w", encoding="utf-8") as f:
+    # Το vercel.json γράφεται στη ρίζα του repo (όχι μέσα στο site/), γιατί το Vercel project
+    # χτίζει με Root Directory = repo root· το outputDirectory δείχνει πού είναι το πραγματικό site.
+    with open(os.path.join(HERE, "vercel.json"), "w", encoding="utf-8") as f:
         json.dump(vercel, f, ensure_ascii=False, indent=2)
+        f.write("\n")
 
 
 def sitemap():
-    rows = "".join(f"<url><loc>{SITE['domain']}/{u}</loc><lastmod>{TODAY}</lastmod><changefreq>{fr}</changefreq><priority>{p}</priority></url>\n"
-                   for u, p, fr in PAGES)
+    rows = "".join(f"<url><loc>{SITE['domain']}/{u}</loc><lastmod>{lm}</lastmod><changefreq>{fr}</changefreq><priority>{p}</priority></url>\n"
+                   for u, p, fr, lm in PAGES)
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + rows + "</urlset>\n")
-    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /i-lista-mou/\nSitemap: {SITE['domain']}/sitemap.xml\n")
+    # Το i-lista-mou/ είναι noindex (προσωπικό, τοπικό στη συσκευή) — δεν μπαίνει σε sitemap ούτε
+    # μπλοκάρεται στο robots.txt, ώστε η noindex ετικέτα στη σελίδα να είναι ορατή στα bots.
+    write("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {SITE['domain']}/sitemap.xml\n")
     write("search-index.json", json.dumps(SEARCH, ensure_ascii=False, separators=(",", ":")))
 
 

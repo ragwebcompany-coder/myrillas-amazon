@@ -335,6 +335,9 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
 .ft__base p{margin:0}
 .ft__base a:hover{color:#fff}
 .ft__disclaimer{width:var(--wrap);margin:12px auto 0;font-size:.73rem;color:var(--dim-2);max-width:74ch}
+.ft__credit{width:var(--wrap);margin:10px auto 0;font-size:.73rem;color:var(--dim-2);text-align:center}
+.ft__credit a{color:var(--dim-2);text-decoration:underline;text-underline-offset:2px}
+.ft__credit a:hover{color:#fff}
 @media (max-width:1000px){.ft__grid{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.ft__grid{grid-template-columns:1fr}}
 
