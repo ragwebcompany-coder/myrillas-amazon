@@ -1,0 +1,7 @@
+RewriteEngine On
+Redirect 301 /dr-k-myrillas /gynaikologos-dr-k-myrillas/
+Redirect 301 /newsletter /
+Redirect 301 /robotiki-xeirourgiki /services/robotiki-xeirourgiki/
+Redirect 301 /testimonials /
+RewriteRule ^blog/page/[0-9]+/?$ /blog/ [R=301,L]
+ErrorDocument 404 /404.html
