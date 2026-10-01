@@ -163,11 +163,19 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
 .hero:hover .hero__arrow,.hero:focus-within .hero__arrow{opacity:1}
 .hero__arrow:hover{background:var(--blue);color:var(--blue-ink)}
 .hero__arrow--l{left:14px}.hero__arrow--r{right:14px}
-.hero__pdfw{position:absolute;left:0;right:0;bottom:clamp(88px,12vh,130px);z-index:5;display:flex;justify-content:flex-end;pointer-events:none}
+.hero__pdfw{position:absolute;left:0;right:0;top:var(--tb-h);bottom:clamp(60px,9vh,100px);z-index:5;display:flex;justify-content:flex-end;align-items:center;padding-right:clamp(40px,9vw,170px);pointer-events:none}
 .hero__pdf{pointer-events:auto;display:flex;flex-direction:column;gap:12px;width:236px;padding:14px;border-radius:var(--r-lg);
   background:rgba(15,23,30,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line-2);
-  color:#fff;text-decoration:none;box-shadow:0 24px 50px rgba(0,0,0,.45);transition:transform .25s var(--ease),border-color .25s var(--ease)}
-.hero__pdf:hover{transform:translateY(-4px);border-color:var(--blue)}
+  color:#fff;text-decoration:none;border-color:rgba(255,255,255,.55);
+  box-shadow:0 0 0 1px rgba(255,255,255,.25),0 0 26px rgba(255,255,255,.38),0 0 70px rgba(255,255,255,.2),0 24px 50px rgba(0,0,0,.45);
+  transition:transform .25s var(--ease),border-color .25s var(--ease);
+  animation:pdfFloat 4.5s ease-in-out infinite,pdfGlow 4.5s ease-in-out infinite}
+.hero__pdf:hover{transform:scale(1.03);border-color:#fff;animation-play-state:paused}
+@keyframes pdfFloat{0%,100%{translate:0 -7px}50%{translate:0 7px}}
+@keyframes pdfGlow{
+  0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.25),0 0 26px rgba(255,255,255,.38),0 0 70px rgba(255,255,255,.2),0 24px 50px rgba(0,0,0,.45)}
+  50%{box-shadow:0 0 0 1px rgba(255,255,255,.35),0 0 36px rgba(255,255,255,.55),0 0 90px rgba(255,255,255,.3),0 24px 50px rgba(0,0,0,.45)}}
+@media (prefers-reduced-motion:reduce){.hero__pdf{animation:none}}
 .hero__pdf-cover{display:block;border-radius:var(--r);overflow:hidden;background:#fff}
 .hero__pdf-cover img{display:block;width:100%;height:auto}
 .hero__pdf-txt{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -175,8 +183,9 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
 .hero__pdf-t{font-size:1rem;font-weight:800;line-height:1.25}
 .hero__pdf .btn{margin-top:6px;width:100%}
 @media (max-width:1180px){
-  .hero__pdfw{bottom:auto;top:calc(var(--tb-h) + 12px)}
-  .hero__pdf{flex-direction:row;align-items:center;width:auto;max-width:100%;padding:10px 14px 10px 10px}
+  .hero__pdfw{bottom:auto;top:calc(var(--tb-h) + 12px);padding-right:0}
+  .hero__pdf{animation-name:pdfFloatS,pdfGlowS;
+    box-shadow:0 0 0 1px rgba(255,255,255,.2),0 0 18px rgba(255,255,255,.3),0 10px 24px rgba(0,0,0,.4);flex-direction:row;align-items:center;width:auto;max-width:100%;padding:10px 14px 10px 10px}
   .hero__pdf-cover{width:58px;flex:none}
   .hero__pdf-txt{gap:2px}
   .hero__pdf-k{font-size:.66rem}
@@ -184,6 +193,10 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
   .hero__pdf .btn{display:none}
   .hero__pdf-txt::after{content:"Διαβάστε το PDF ›";font-size:.82rem;font-weight:700;color:var(--blue-2)}
 }
+@keyframes pdfFloatS{0%,100%{translate:0 -3px}50%{translate:0 3px}}
+@keyframes pdfGlowS{
+  0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.2),0 0 18px rgba(255,255,255,.3),0 10px 24px rgba(0,0,0,.4)}
+  50%{box-shadow:0 0 0 1px rgba(255,255,255,.3),0 0 26px rgba(255,255,255,.45),0 10px 24px rgba(0,0,0,.4)}}
 @media (max-width:760px){
   .hero__pdfw~.hero__slide .hero__bg{height:calc(60vw + 90px);min-height:350px}
   .hero__pdf{width:100%}
