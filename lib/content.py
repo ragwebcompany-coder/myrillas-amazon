@@ -192,8 +192,6 @@ for _g, (_gt, _gk, _ids) in enumerate(VIDEO_GROUPS):
         VIDEOS.append(dict(id=_i, title=_clean_title(_title), group=_gt, kicker=_gk,
                            thumb=VIDEO_THUMBS.get(_i)))
 VID = {v["id"]: v for v in VIDEOS}
-HOME_VIDEOS = ["cAh-5sH2lV0", "AxqM0BT6XIE", "Eg1q9phhklk", "NjDBP5ciyq8", "UlkqdHo8DFI",
-               "AsA3RQ8XmsA", "OM1c7x3ZwdM", "r0bjdoeFty4", "WrXrhO9063c", "iGFBuU3COOY"]
 
 # ── μαρτυρίες, όπως δημοσιεύονται στο site ───────────────────────────────────
 TESTIMONIALS = [

@@ -382,7 +382,7 @@ def row(*, rid, title, cards, sub="", all_href=None, all_label="Δείτε όλ�
 
 
 # ── hero carousel (αρχική) ───────────────────────────────────────────────────
-def hero(depth, slides):
+def hero(depth, slides, extra=""):
     r = rel(depth)
     out, dots = [], []
     for i, h in enumerate(slides):
@@ -411,6 +411,7 @@ def hero(depth, slides):
 </div>''')
         dots.append(f'<button type="button" data-dot="{i}" aria-label="Διαφάνεια {i + 1}: {html.escape(title, quote=True)}"{" aria-current=true" if i == 0 else ""}><i></i></button>')
     return f'''<section class="hero" id="hero" data-hero aria-roledescription="carousel">
+  {extra}
   {''.join(out)}
   <div class="wrap hero__dots">{''.join(dots)}</div>
   <button class="hero__arrow hero__arrow--l" type="button" data-hero-prev aria-label="Προηγούμενο">{I['left']}</button>

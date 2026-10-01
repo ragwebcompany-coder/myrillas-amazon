@@ -163,6 +163,31 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
 .hero:hover .hero__arrow,.hero:focus-within .hero__arrow{opacity:1}
 .hero__arrow:hover{background:var(--blue);color:var(--blue-ink)}
 .hero__arrow--l{left:14px}.hero__arrow--r{right:14px}
+.hero__pdfw{position:absolute;left:0;right:0;bottom:clamp(88px,12vh,130px);z-index:5;display:flex;justify-content:flex-end;pointer-events:none}
+.hero__pdf{pointer-events:auto;display:flex;flex-direction:column;gap:12px;width:236px;padding:14px;border-radius:var(--r-lg);
+  background:rgba(15,23,30,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line-2);
+  color:#fff;text-decoration:none;box-shadow:0 24px 50px rgba(0,0,0,.45);transition:transform .25s var(--ease),border-color .25s var(--ease)}
+.hero__pdf:hover{transform:translateY(-4px);border-color:var(--blue)}
+.hero__pdf-cover{display:block;border-radius:var(--r);overflow:hidden;background:#fff}
+.hero__pdf-cover img{display:block;width:100%;height:auto}
+.hero__pdf-txt{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hero__pdf-k{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-2)}
+.hero__pdf-t{font-size:1rem;font-weight:800;line-height:1.25}
+.hero__pdf .btn{margin-top:6px;width:100%}
+@media (max-width:1180px){
+  .hero__pdfw{bottom:auto;top:calc(var(--tb-h) + 12px)}
+  .hero__pdf{flex-direction:row;align-items:center;width:auto;max-width:100%;padding:10px 14px 10px 10px}
+  .hero__pdf-cover{width:58px;flex:none}
+  .hero__pdf-txt{gap:2px}
+  .hero__pdf-k{font-size:.66rem}
+  .hero__pdf-t{font-size:.9rem}
+  .hero__pdf .btn{display:none}
+  .hero__pdf-txt::after{content:"Διαβάστε το PDF ›";font-size:.82rem;font-weight:700;color:var(--blue-2)}
+}
+@media (max-width:760px){
+  .hero__pdfw~.hero__slide .hero__bg{height:calc(60vw + 90px);min-height:350px}
+  .hero__pdf{width:100%}
+}
 @media (max-width:760px){
   .hero{height:auto;min-height:0}
   .hero__slide{position:relative;display:none}
@@ -275,6 +300,8 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
   border-radius:var(--r-lg);padding:clamp(22px,3vw,40px);border:1px solid var(--line)}
 .cast__ph{width:min(220px,40vw);border-radius:var(--r);overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.4)}
 .cast__ph img{width:100%}
+.cast--pdf .cast__ph{display:block;background:#fff;transition:transform .25s ease}
+.cast--pdf .cast__ph:hover{transform:translateY(-3px)}
 .cast__k{margin:0 0 .4rem;font-size:.85rem;font-weight:700;color:var(--blue-2)}
 .cast h2{margin-bottom:.4em}
 .cast p{color:#d5dee6;max-width:62ch}
@@ -502,6 +529,10 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
 .panel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
 .panel ul a{font-size:.9rem;font-weight:600;color:#fff}
 .panel ul a:hover{color:var(--blue-2)}
+.panel--pdf h3{text-align:center}
+.panel__cover{display:block;margin-top:14px;border-radius:var(--r);overflow:hidden;background:#fff}
+.panel__cover img{display:block;width:100%;height:auto;transition:transform .3s ease}
+.panel__cover:hover img{transform:scale(1.03)}
 .dl{margin:0;display:grid;gap:.1rem}
 .dl div{display:grid;grid-template-columns:170px 1fr;gap:1rem;padding:.75rem 0;border-bottom:1px solid var(--line);font-size:.92rem}
 .dl dt{color:var(--dim);font-weight:600}

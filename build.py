@@ -14,11 +14,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 import content as C
 import ui as U
-from content import (SITE, CATEGORIES, CAT, SERVICES, SVC, ARTICLES, VIDEOS, VID, VIDEO_GROUPS, HOME_VIDEOS,
+from content import (SITE, CATEGORIES, CAT, SERVICES, SVC, ARTICLES, VIDEOS, VID, VIDEO_GROUPS,
                      TESTIMONIALS, TIMELINE, MEMBERSHIPS, STUDIES, PRESS, HERO, TOP10, IMGMAP,
                      rel, read_minutes, pretty_date, plain, shorten, related_articles, article_rec,
                      ARTICLE_TWIN, TODAY)
 
+PDF_HREF = "assets/docs/2021-11-sel-2-compressed.pdf"
+PDF_COVER = "2015-05-sel.jpg"
 OUT = os.path.join(HERE, "site")
 SRC = os.path.join(HERE, "src")
 IMG_SRC = os.path.join(HERE, "content", "img-src")
@@ -126,20 +128,23 @@ def build_home():
                           all_href=f"katigoria/{c['slug']}/", attrs=f'data-row-cat="{c["slug"]}"')
     singles = [U.card(SVC[s], d) for c in CATEGORIES if len(c["services"]) == 1 for s in c["services"]]
     singles += [U.card(SVC[s], d) for s in ("ksirotita-atrofia-kolpou-emminopafsi", "kolposkopisi", "loop-traxilou")]
-    v_cards = [U.video_card(VID[i], d) for i in HOME_VIDEOS if i in VID]
     a_cards = [U.card(article_rec(a["slug"]), d, kind="article") for a in ARTICLES[:12]]
     revs = "".join(U.review(t, d) for t in TESTIMONIALS)
     chans = "".join(f'''<a class="chan__i" href="{p['url'] or 'photo-gallery/'}"{' rel="noopener" target="_blank"' if p['url'] else ''}>
       <span class="chan__logo">{U.pic(p['logo'], p['name'], d)}</span>
       <span><h3>{html.escape(p['name'])}</h3><p>{html.escape(p['text'])}</p>
       <span class="ext">{'Επίσκεψη στο site' if p['url'] else 'Περισσότερα'} {U.I['ext'] if p['url'] else ''}</span></span></a>''' for p in SITE["partners"])
-    body = U.hero(d, HERO) + f'''
+    hero_pdf = f'''<div class="wrap hero__pdfw"><a class="hero__pdf" href="{PDF_HREF}" target="_blank" rel="noopener">
+    <span class="hero__pdf-cover">{U.pic(PDF_COVER, "", d)}</span>
+    <span class="hero__pdf-txt"><span class="hero__pdf-k">Το έντυπο του ιατρείου</span>
+      <span class="hero__pdf-t">{SITE['pdf_title']}</span>
+      <span class="btn btn--blue">Διαβάστε το PDF</span></span></a></div>'''
+    body = U.hero(d, [dict(h, video=None) for h in HERO], extra=hero_pdf) + f'''
 <main id="main" data-home-rows>
   <p class="wrap row__sub" data-profile-hello hidden style="margin-top:1.4rem">Προφίλ: <b data-profile-name></b>. Οι κατηγορίες που σας αφορούν ήρθαν πρώτες.</p>
   <div data-rows-anchor></div>
   <section class="row" data-continue hidden></section>
   {U.row(rid="r-top", title="Top 10 στο ιατρείο", sub="Τα θέματα με το περισσότερο υλικό: κείμενα, βίντεο, χειρουργεία.", cards=top, kind="row--top", all_href="services/")}
-  {U.row(rid="r-vid", title="Από το χειρουργείο και την τηλεόραση", sub="Βίντεο του ιατρείου, με ένα πάτημα.", cards=v_cards, all_href="video-gallery/", all_label="Όλα τα βίντεο")}
   {cat_rows}
   {U.row(rid="r-more", title="Ακόμη", cards=singles, all_href="services/")}
   {U.row(rid="r-art", title="Άρθρα", sub="Κείμενα του ιατρείου για την εγκυμοσύνη, τη γυναικολογία και τις εξετάσεις.", cards=a_cards, all_href="blog/", all_label="Όλα τα άρθρα")}
@@ -160,10 +165,20 @@ def build_home():
           <li><b>65</b><span>περιστατικά second look laparoscopy</span></li>
           <li><b>{len(VIDEOS)}</b><span>βίντεο από χειρουργεία και ΜΜΕ</span></li>
         </ul>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-          <a class="btn btn--blue" href="gynaikologos-dr-k-myrillas/">Βιογραφικό</a>
-          <button class="btn btn--ghost" type="button" data-video="WrXrhO9063c" data-vtitle="Κωνσταντίνος Μυρίλλας, βιογραφικό">{U.I['play']}Δείτε το βίντεο</button>
-        </div>
+        <a class="btn btn--blue" href="gynaikologos-dr-k-myrillas/">Βιογραφικό</a>
+      </div>
+    </div>
+  </div></section>
+
+  <section class="sec sec--tight rv"><div class="wrap">
+    <div class="cast cast--pdf">
+      <a class="cast__ph" href="{PDF_HREF}" target="_blank" rel="noopener" aria-label="Διαβάστε το PDF: {SITE['pdf_title']}">{U.pic(PDF_COVER, "Εξώφυλλο εντύπου: minimally invasive surgery", d)}</a>
+      <div>
+        <p class="cast__k">Το έντυπο του ιατρείου · PDF</p>
+        <h2>{SITE['pdf_title']}</h2>
+        <p>Το έντυπο του ιατρείου για τη λαπαροσκοπική και τη ρομποτική χειρουργική, ολόκληρο σε PDF,
+          για να το διαβάσετε με την ησυχία σας.</p>
+        <a class="btn btn--blue btn--lg" href="{PDF_HREF}" target="_blank" rel="noopener">Διαβάστε το PDF</a>
       </div>
     </div>
   </div></section>
@@ -188,11 +203,6 @@ def build_home():
     <div class="chan">{chans}</div>
   </div></section>
 
-  <section class="sec sec--tight rv"><div class="wrap">
-    <div class="sec__head"><h2>Χειρουργική ελάχιστης παρέμβασης</h2>
-      <p>Το έντυπο του ιατρείου για τη λαπαροσκοπική και ρομποτική χειρουργική, σε PDF.</p></div>
-    <a class="btn btn--ghost" href="assets/docs/2021-11-sel-2-compressed.pdf" target="_blank" rel="noopener">Διαβάστε το PDF</a>
-  </div></section>
   {U.cta_band(d)}
 </main>
 {guide_data()}'''
@@ -248,8 +258,9 @@ def build_service(s):
         sib += [U.card(SVC[x], d) for x in TOP10 if x != slug and SVC[x]["cat"] != s["cat"]][:4 - len(sib)]
     arts = [U.card(article_rec(a["slug"]), d, kind="article") for a in related_articles(slug, 8)]
     vids = [U.video_card(VID[v], d, wide=False) for v in s["videos"] if v in VID]
-    if not vids:
-        vids = [U.video_card(VID[v], d, wide=False) for v in HOME_VIDEOS[:6]]
+    vids_sec = f'''<section class="sec sec--tight" id="sxetika-video"><div class="wrap">
+  <div class="sec__head"><h2>Σχετικά βίντεο</h2><p>Βίντεο του ιατρείου για το θέμα «{html.escape(s['title'])}». Παίζουν εδώ, με ένα πάτημα.</p></div>
+  <div class="grid">{"".join(vids)}</div></div></section>''' if vids else ""
     trailer = next((v for v in s["videos"] if v in VID), None)
     meta = [(s["kind"], ""), (cat.get("short", cat["title"]), ""), (f"{n} ενότητες" if n > 1 else "1 ενότητα", ""),
             (f"{read_minutes(s['words'])} λεπτά", ""), ("Βίντεο", "blue") if s["videos"] else ("", "")]
@@ -264,6 +275,9 @@ def build_service(s):
     ])
     aside = f'''<div class="panel"><h3>Ραντεβού</h3><p>{SITE['hours_short']}. Για άλλες ημέρες, κατόπιν συνεννόησης.</p>
   <button class="btn btn--blue" type="button" data-open="book" data-topic="{html.escape(s['title'], quote=True)}">Ζητήστε ραντεβού</button></div>
+<div class="panel panel--pdf"><h3>{SITE['pdf_title']}</h3>
+  <a class="btn btn--blue" href="../../{PDF_HREF}" target="_blank" rel="noopener">Διαβάστε το PDF</a>
+  <a class="panel__cover" href="../../{PDF_HREF}" target="_blank" rel="noopener" aria-label="Διαβάστε το PDF: {SITE['pdf_title']}">{U.pic(PDF_COVER, "Εξώφυλλο εντύπου: minimally invasive surgery", d)}</a></div>
 <div class="panel"><h3>Στην ίδια κατηγορία</h3><ul>{"".join(f'<li><a href="../{x["slug"]}/">{html.escape(x["title"])}</a></li>' for x in SERVICES if x["cat"] == s["cat"] and x["slug"] != slug) or "<li>Μόνο αυτό το θέμα.</li>"}</ul></div>
 <div class="panel"><h3>Εργαλεία</h3><ul>
   <li><button class="linky" type="button" data-share>{U.I['share']} Κοινοποίηση</button></li>
@@ -271,9 +285,8 @@ def build_service(s):
   <li><button class="linky" type="button" data-xray="services/{slug}/">{U.I['xray']} X-Ray</button></li>
 </ul></div>'''
     panels = [
-        ("episodes", "Επεισόδια", f'<div class="wrap doc"><div class="doc__main">{eps_html}</div><aside class="doc__aside">{aside}</aside></div>'),
+        ("episodes", "Επεισόδια", f'<div class="wrap doc"><div class="doc__main">{eps_html}</div><aside class="doc__aside">{aside}</aside></div>{vids_sec}'),
         ("related", "Σχετικά", U.row(rid="r-sib", title="Στην ίδια κατηγορία", cards=sib, all_href=f"../../katigoria/{cat['slug']}/")
-                                + U.row(rid="r-vid", title="Βίντεο", cards=vids, all_href="../../video-gallery/", all_label="Όλα τα βίντεο")
                                 + (U.row(rid="r-art", title="Σχετικά άρθρα", cards=arts, all_href="../../blog/") if arts else "")),
         ("details", "Λεπτομέρειες", f'<div class="wrap wrap--narrow">{details}</div>'),
     ]
