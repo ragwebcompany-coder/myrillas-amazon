@@ -14,7 +14,18 @@ import re, os, json, html, struct
 from content import (SITE, CATEGORIES, CAT, SERVICES, SVC, SERVICE_CAT, VIDEOS, VID, TESTIMONIALS,
                      rel, read_minutes, pretty_date, plain, shorten, IMGMAP, ROOT)
 
-ASSET_V = "1"
+def _asset_v():
+    """Hash των css/js, ώστε κάθε αλλαγή τους να παρακάμπτει την cache του browser."""
+    import hashlib, os
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "assets")
+    h = hashlib.md5()
+    for f in ("css/prime.css", "js/prime.js"):
+        with open(os.path.join(base, f), "rb") as fh:
+            h.update(fh.read())
+    return h.hexdigest()[:8]
+
+
+ASSET_V = _asset_v()
 IMG_SRC = os.path.join(ROOT, "content", "img-src")
 
 I = {
