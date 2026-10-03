@@ -85,6 +85,12 @@ photo-gallery/, epikinonia/, gynaikologos-dr-k-myrillas/). Ό,τι άλλαξε 
   `ContactPage`, `Review`, `ItemList` βίντεο.
 - Τα meta descriptions του παλιού site διατηρούνται (καθαρισμένα από «Κλείστε ραντεβού»).
 - Open Graph εικόνα ανά σελίδα, geo meta, `og-default.jpg`.
+- Αρχική: ένα `<h1>` με «Γυναικολόγος – Μαιευτήρας Χειρουργός στην Αθήνα» και τοπικό κείμενο (Βύρωνας και γύρω περιοχές)·
+  οι τίτλοι του carousel είναι `<h2>`.
+- `FAQPage` σε 33 υπηρεσίες από το `content/faq.json` (οι ερωτήσεις του schema του παλιού site, 149 συνολικά).
+- Τα 4 άρθρα-δίδυμα (`ARTICLE_TWIN`) έχουν canonical στη σελίδα υπηρεσίας και δεν μπαίνουν στο sitemap.
+- `Physician`: `areaServed`, `contactPoint`, `alumniOf`, `hasCredential`· `ProfilePage` στο βιογραφικό· εικόνες στο sitemap.
+- Διορθώσεις τίτλων/περιγραφών: `SEO_TITLE`, `SEO_META`, `ARTICLE_SEO_TITLE` στο `lib/content.py`.
 
 ## Ποιότητα
 

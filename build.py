@@ -34,8 +34,8 @@ def write(path, markup):
         f.write(markup)
 
 
-def register(url, prio="0.6", freq="monthly", lastmod=None):
-    PAGES.append((url, prio, freq, lastmod or TODAY))
+def register(url, prio="0.6", freq="monthly", lastmod=None, img=None):
+    PAGES.append((url, prio, freq, lastmod or TODAY, img))
 
 
 def index(url, *, title, desc, kind, img=None, kw="", video=None, xray=None):
@@ -63,6 +63,12 @@ def physician_ld():
             "telephone": SITE["phone_href"], "email": SITE["email"], "address": address_ld(),
             "geo": {"@type": "GeoCoordinates", "latitude": SITE["lat"], "longitude": SITE["lng"]},
             "hasMap": SITE["map_url"], "medicalSpecialty": ["Obstetric", "Gynecologic"],
+            "areaServed": [{"@type": "City", "name": a} for a in SITE["areas"]],
+            "contactPoint": [{"@type": "ContactPoint", "contactType": "appointments", "telephone": t,
+                              "availableLanguage": ["el", "en"]} for t in (SITE["phone_href"], SITE["mobile_href"])],
+            "alumniOf": {"@type": "CollegeOrUniversity", "name": "Ιατρική Σχολή Πανεπιστημίου Αθηνών"},
+            "hasCredential": {"@type": "EducationalOccupationalCredential", "credentialCategory": "M.R.C.O.G.",
+                              "recognizedBy": {"@type": "Organization", "name": "Royal College of Obstetricians and Gynaecologists"}},
             "knowsLanguage": ["el", "en"], "priceRange": "€€",
             "openingHoursSpecification": [{"@type": "OpeningHoursSpecification",
                                            "dayOfWeek": ["Monday", "Wednesday", "Thursday"],
@@ -85,12 +91,12 @@ def base_graph():
 
 # ── shell ────────────────────────────────────────────────────────────────────
 def shell(*, path, title, desc, depth, body, active="", jsonld=None, body_class="", og_image=None,
-          page_meta=None, kind="website", noindex=False):
+          page_meta=None, kind="website", noindex=False, canonical=None):
     ld = [base_graph()] + list(jsonld or [])
     extra = ""
     if page_meta:
         extra = f'<script>window.__PAGE={json.dumps(page_meta, ensure_ascii=False, separators=(",", ":"))}</script>'
-    return (U.head(title=title, desc=desc, depth=depth, canonical=path, jsonld=ld, body_class=body_class,
+    return (U.head(title=title, desc=desc, depth=depth, canonical=canonical or path, jsonld=ld, body_class=body_class,
                    og_image=og_image, kind=kind, noindex=noindex)
             + U.topbar(depth, active) + body + U.footer(depth) + U.tail(depth, extra_js=extra))
 
@@ -141,6 +147,20 @@ def build_home():
       <span class="btn btn--blue">Διαβάστε το PDF</span></span></a></div>'''
     body = U.hero(d, [dict(h, video=None) for h in HERO], extra=hero_pdf) + f'''
 <main id="main" data-home-rows>
+  <section class="intro"><div class="wrap">
+    <p class="cast__k">Ιατρείο στον Βύρωνα · Χειρουργεία στο {SITE['hospital']}</p>
+    <h1>Γυναικολόγος – Μαιευτήρας Χειρουργός στην Αθήνα: {SITE['doctor']}</h1>
+    <p>Ο {SITE['doctor']}, M.R.C.O.G., είναι μαιευτήρας – χειρουργός γυναικολόγος με ιατρείο στον Βύρωνα
+      ({SITE['address']}), δίπλα σε Παγκράτι, Καισαριανή, Υμηττό και Ηλιούπολη. Ειδικεύεται στη
+      <a href="services/laparoskopikes-epemvaseis/">λαπαροσκοπική</a> και τη
+      <a href="services/robotiki-xeirourgiki/">ρομποτική χειρουργική</a> για
+      <a href="services/inomyomata-mitras/">ινομυώματα</a>,
+      <a href="services/endomitriosi-symptomata-diagnosi-therapeia/">ενδομητρίωση</a>,
+      <a href="services/kystes-oothikon/">κύστες ωοθηκών</a> και
+      <a href="services/ysterektomi/">υστερεκτομή</a>, και παρακολουθεί
+      <a href="katigoria/maieftiki/">εγκυμοσύνη και τοκετό</a> στο {SITE['hospital']}.
+      Ραντεβού: <a href="tel:{SITE['phone_href']}">{SITE['phone']}</a> · <a href="epikinonia/">{SITE['hours_short']}</a>.</p>
+  </div></section>
   <p class="wrap row__sub" data-profile-hello hidden style="margin-top:1.4rem">Προφίλ: <b data-profile-name></b>. Οι κατηγορίες που σας αφορούν ήρθαν πρώτες.</p>
   <div data-rows-anchor></div>
   <section class="row" data-continue hidden></section>
@@ -206,11 +226,11 @@ def build_home():
   {U.cta_band(d)}
 </main>
 {guide_data()}'''
-    desc = ("Γυναικολόγος - Μαιευτήρας Χειρουργός Κωνσταντίνος Μυρίλλας με ιατρείο στην Αθήνα, εξειδικεύεται "
-            "στη ρομποτική, λαπαροσκοπική και αισθητική χειρουργική.")
+    desc = ("Γυναικολόγος - Μαιευτήρας Χειρουργός Κωνσταντίνος Μυρίλλας με ιατρείο στην Αθήνα (Βύρωνας), "
+            "εξειδικεύεται στη ρομποτική, λαπαροσκοπική και αισθητική χειρουργική.")
     # og_image=None -> πέφτει στο og-default.jpg (1200x630, σωστά κομμένο από την ίδια φωτογραφία),
     # που δείχνει σωστά σε Facebook/Twitter/LinkedIn· το πρωτότυπο 2021-11-myr.jpg είναι πολύ πλατύ (1920x493).
-    write("index.html", shell(path="", title="Γυναικολόγος - Μαιευτήρας Χειρουργός Αθήνα Κων/νος Μυρίλλας",
+    write("index.html", shell(path="", title="Γυναικολόγος Μαιευτήρας Αθήνα – Βύρωνας | Κων/νος Μυρίλλας",
                               desc=desc, depth=d, body=body, active="home", body_class="is-home"))
     register("", "1.0", "weekly")
     index("", title="Αρχική", desc="Όλα τα θέματα, τα βίντεο και ο γιατρός", kind="page", kw="αρχικη home")
@@ -245,6 +265,16 @@ def service_ld(s, eps):
     if vids:
         ld["video"] = vids
     return {k: v for k, v in ld.items() if v}
+
+
+def faq_ld(slug):
+    """FAQPage από το content/faq.json· οι απαντήσεις βρίσκονται αυτούσιες στα επεισόδια της σελίδας."""
+    qs = C.FAQ.get(slug)
+    if not qs:
+        return None
+    return {"@context": "https://schema.org", "@type": "FAQPage", "@id": f"{SITE['domain']}/services/{slug}/#faq",
+            "inLanguage": "el", "mainEntity": [{"@type": "Question", "name": q["q"],
+                                                "acceptedAnswer": {"@type": "Answer", "text": q["a"]}} for q in qs]}
 
 
 def build_service(s):
@@ -299,9 +329,9 @@ def build_service(s):
     write(f"services/{slug}/index.html",
           shell(path=f"services/{slug}/", title=s["seo_title"] or C.seo_title(s["title"]), desc=meta_desc, depth=d,
                 body=body, active=cat["slug"] if cat["slug"] in ("maieftiki", "gynaikologia", "xeirourgiki") else "services",
-                jsonld=[service_ld(s, eps), crumb_ld], og_image=s["image"], kind="article",
+                jsonld=[x for x in (service_ld(s, eps), crumb_ld, faq_ld(slug)) if x], og_image=s["image"], kind="article",
                 page_meta={"t": s["title"], "u": f"services/{slug}/", "img": s["image"], "k": f"{s['kind']} · {cat['title']}"}))
-    register(f"services/{slug}/", "0.9")
+    register(f"services/{slug}/", "0.9", img=s["image"])
     index(f"services/{slug}/", title=s["title"], desc=f"{s['kind']} · {cat['title']}", kind="service", img=s["image"],
           kw=s["lead"] + " " + " ".join(t for t, _ in eps), xray=xray)
 
@@ -320,7 +350,7 @@ def build_services_hub():
     Κάθε θέμα ανοίγει σε επεισόδια, με βίντεο όπου υπάρχει.</p>
   <div class="chips">{chips}</div></div></div></section>
 <main id="main">{rows}{U.cta_band(d)}</main>'''
-    write("services/index.html", shell(path="services/", title="Όλα τα θέματα | Κ. Μυρίλλας",
+    write("services/index.html", shell(path="services/", title="Γυναικολογία, Μαιευτική & Χειρουργική: όλα τα θέματα | Κ. Μυρίλλας",
           desc="Μαιευτική, γυναικολογία, ενδομήτριο, τράχηλος, εμμηνόπαυση, αποβολή, ωοθήκες, HPV, γονιμότητα και χειρουργική ελάχιστης παρέμβασης: 36 θέματα από το ιατρείο του Κ. Μυρίλλα.",
           depth=d, body=body, active="services", jsonld=[crumb_ld]))
     register("services/", "0.8", "weekly")
@@ -356,7 +386,7 @@ def build_category(c):
   {U.row(rid="r-art", title="Σχετικά άρθρα", cards=a_cards, all_href="../../blog/") if a_cards else ""}
   {U.cta_band(d)}
 </main>'''
-    write(f"katigoria/{c['slug']}/index.html", shell(path=f"katigoria/{c['slug']}/", title=f"{c['title']} | Κ. Μυρίλλας",
+    write(f"katigoria/{c['slug']}/index.html", shell(path=f"katigoria/{c['slug']}/", title=f"{c['title']} | Γυναικολόγος Κ. Μυρίλλας, Αθήνα",
           desc=f"{c['title']}: {c['blurb']} Θέματα, βίντεο και άρθρα από τον μαιευτήρα χειρουργό γυναικολόγο Κ. Μυρίλλα.",
           depth=d, body=body, active=c["slug"], jsonld=[crumb_ld]))
     register(f"katigoria/{c['slug']}/", "0.7", "weekly")
@@ -415,8 +445,11 @@ def build_article(a):
     write(f"{slug}/index.html", shell(path=f"{slug}/", title=r["seo_title"] or C.seo_title(a["title"]),
           desc=(r["meta"] or r["lead"])[:158], depth=d, body=body, active="blog", jsonld=[ld, crumb_ld],
           og_image=r["image"], kind="article",
+          canonical=f"services/{twin}/" if twin and twin in SVC else None,
           page_meta={"t": a["title"], "u": f"{slug}/", "img": r["image"], "k": f"Άρθρο · {a['tag']}"}))
-    register(f"{slug}/", "0.6", lastmod=r["mod"] or r["pub"] or None)
+    # Τα άρθρα-δίδυμα έχουν το ίδιο κείμενο με τη σελίδα υπηρεσίας: canonical εκεί (όπως στο παλιό site), εκτός sitemap.
+    if not (twin and twin in SVC):
+        register(f"{slug}/", "0.6", lastmod=r["mod"] or r["pub"] or None, img=r["image"])
     index(f"{slug}/", title=a["title"], desc=f"Άρθρο · {a['tag']}", kind="article", img=r["image"],
           kw=plain(r["body"])[:400], xray=xray)
 
@@ -564,9 +597,12 @@ def build_doctor():
   {U.cta_band(d)}
 </main>'''
     write("gynaikologos-dr-k-myrillas/index.html", shell(path="gynaikologos-dr-k-myrillas/",
-          title="Γυναικολόγος Dr. Κ. Μυρίλλας: βιογραφικό | Μαιευτήρας Χειρουργός Αθήνα",
+          title="Γυναικολόγος Κωνσταντίνος Μυρίλλας: βιογραφικό | Αθήνα",
           desc="Ο μαιευτήρας χειρουργός γυναικολόγος Κωνσταντίνος Μυρίλλας, M.R.C.O.G.: σπουδές σε Αθήνα, Λονδίνο και Cambridge, λαπαροσκοπική και ρομποτική χειρουργική, Μαιευτήριο ΡΕΑ.",
-          depth=d, body=body, active="doctor", jsonld=[crumb_ld], og_image="2023-02-dr.-myrillas.jpg", kind="profile"))
+          depth=d, body=body, active="doctor", og_image="2023-02-dr.-myrillas.jpg", kind="profile",
+          jsonld=[crumb_ld, {"@context": "https://schema.org", "@type": "ProfilePage", "inLanguage": "el",
+                             "url": f"{SITE['domain']}/gynaikologos-dr-k-myrillas/",
+                             "mainEntity": {"@id": SITE["domain"] + "/#physician"}}]))
     register("gynaikologos-dr-k-myrillas/", "0.8")
     index("gynaikologos-dr-k-myrillas/", title=SITE["doctor"], desc="Βιογραφικό, μελέτες, χρονολόγιο", kind="page",
           img="2023-02-dr.-myrillas.jpg", kw="γιατρος βιογραφικο μυριλλας doctor cv")
@@ -608,7 +644,7 @@ def build_contact():
       <button class="btn btn--blue" type="button" data-open="book">Ζητήστε ραντεβού</button></div>
   </div>
 </div></section></main>'''
-    write("epikinonia/index.html", shell(path="epikinonia/", title="Επικοινωνία | Γυναικολόγος Κ. Μυρίλλας, Βύρωνας",
+    write("epikinonia/index.html", shell(path="epikinonia/", title="Γυναικολόγος Βύρωνας: επικοινωνία & ραντεβού | Κ. Μυρίλλας",
           desc=f"Ιατρείο: {SITE['address']}, {SITE['locality']}. Τηλέφωνο {SITE['phone']}, κινητό {SITE['mobile']}. Δευτέρα, Τετάρτη και Πέμπτη 17:00 – 21:30.",
           depth=d, body=body, active="", jsonld=[crumb_ld, ld]))
     register("epikinonia/", "0.8")
@@ -791,9 +827,12 @@ def redirects():
 
 
 def sitemap():
-    rows = "".join(f"<url><loc>{SITE['domain']}/{u}</loc><lastmod>{lm}</lastmod><changefreq>{fr}</changefreq><priority>{p}</priority></url>\n"
-                   for u, p, fr, lm in PAGES)
-    write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + rows + "</urlset>\n")
+    def image(i):
+        return f"<image:image><image:loc>{SITE['domain']}/assets/img/{i}</image:loc></image:image>" if i else ""
+    rows = "".join(f"<url><loc>{SITE['domain']}/{u}</loc><lastmod>{lm}</lastmod><changefreq>{fr}</changefreq><priority>{p}</priority>{image(i)}</url>\n"
+                   for u, p, fr, lm, i in PAGES)
+    write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+                         'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n' + rows + "</urlset>\n")
     # Το i-lista-mou/ είναι noindex (προσωπικό, τοπικό στη συσκευή) — δεν μπαίνει σε sitemap ούτε
     # μπλοκάρεται στο robots.txt, ώστε η noindex ετικέτα στη σελίδα να είναι ορατή στα bots.
     write("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {SITE['domain']}/sitemap.xml\n")

@@ -22,6 +22,13 @@ EXTRA = json.load(open(os.path.join(CONTENT, "pages-extra.json"), encoding="utf-
 YT = json.load(open(os.path.join(CONTENT, "yt-titles.json"), encoding="utf-8"))
 IMGMAP = json.load(open(os.path.join(CONTENT, "imgmap.json"), encoding="utf-8"))
 BLOG_ORDER = json.load(open(os.path.join(CONTENT, "blog-order.json"), encoding="utf-8"))
+# Συχνές ερωτήσεις ανά υπηρεσία, όπως δηλώνονται στο FAQPage schema του ζωντανού site (Οκτ. 2026).
+# Κάθε απάντηση υπάρχει αυτούσια και στο ορατό κείμενο της σελίδας.
+FAQ = json.load(open(os.path.join(CONTENT, "faq.json"), encoding="utf-8"))
+# Τα <h1> μέσα στο σώμα παλιών άρθρων γίνονται <h2>: ένα <h1> ανά σελίδα.
+for _r in LEGACY.values():
+    if isinstance(_r, dict) and "<h1" in (_r.get("body") or ""):
+        _r["body"] = re.sub(r"<(/?)h1\b[^>]*>", r"<\1h2>", _r["body"])
 TODAY = datetime.date.today().isoformat()
 
 # ── το ιατρείο ───────────────────────────────────────────────────────────────
@@ -36,6 +43,7 @@ SITE = dict(
     locality="Βύρωνας",
     region="Αττική",
     region_iso="GR-A1",
+    areas=["Βύρωνας", "Παγκράτι", "Καισαριανή", "Υμηττός", "Ηλιούπολη", "Αθήνα"],
     postcode="162 32",
     lat="37.956885", lng="23.761704",
     map_url="https://www.google.com/maps?ll=37.956885,23.761704&z=17&t=m&hl=el&cid=428410887001455016",
@@ -311,7 +319,7 @@ def plain(markup):
 
 
 def first_paragraph(body, minlen=60):
-    for p in re.findall(r"<(?:p|li)>(.*?)</(?:p|li)>", body or "", re.S):
+    for p in re.findall(r"<(?:p|li)\b[^>]*>(.*?)</(?:p|li)>", body or "", re.S):
         t = plain(p)
         if len(t) >= minlen:
             return t
@@ -342,12 +350,25 @@ def h1_for(slug, r):
     return fixes.get(slug, h)
 
 
+# Τίτλοι/περιγραφές αναζήτησης που αντικαθιστούν τις παλιές όπου ήταν ελλιπείς ή διπλές.
+SEO_TITLE = {
+    "robotiki-xeirourgiki": "Ρομποτική Χειρουργική Da Vinci στη Γυναικολογία | Κ. Μυρίλλας",
+    "laparoskopikes-epemvaseis": "Λαπαροσκοπικές Επεμβάσεις στη Γυναικολογία | Κ. Μυρίλλας",
+}
+SEO_META = {
+    "laparoskopikes-epemvaseis": "Οι σημαντικότερες λαπαροσκοπικές επεμβάσεις στη γυναικολογία: υστερεκτομή, "
+                                 "ινομυώματα, κύστες ωοθηκών, ενδομητρίωση. Γυναικολόγος Κ. Μυρίλλας, Αθήνα.",
+}
+ARTICLE_SEO_TITLE = {
+    "kistes-oothikon": "Κύστη ωοθήκης: τι είναι, συμπτώματα και αντιμετώπιση | Κ. Μυρίλλας",
+}
+
 SERVICES = []
 for _c in CATEGORIES:
     for _s in _c["services"]:
         _r = rec(_s)
-        SERVICES.append(dict(slug=_s, cat=_c["slug"], title=h1_for(_s, _r), seo_title=_r.get("title", ""),
-                             meta=_r.get("desc") or "", lead=lead_for(_r), image=IMGMAP.get(_r.get("image", "")),
+        SERVICES.append(dict(slug=_s, cat=_c["slug"], title=h1_for(_s, _r), seo_title=SEO_TITLE.get(_s) or _r.get("title", ""),
+                             meta=SEO_META.get(_s) or _r.get("desc") or "", lead=lead_for(_r), image=IMGMAP.get(_r.get("image", "")),
                              body=_r.get("body", ""), videos=_r.get("videos", []), words=_r.get("words", 0),
                              pub=_r.get("pub", ""), mod=_r.get("mod", ""), kind=KIND.get(_s, "Ενημέρωση")))
 SVC = {s["slug"]: s for s in SERVICES}
@@ -356,7 +377,7 @@ SVC = {s["slug"]: s for s in SERVICES}
 def article_rec(slug):
     r = LEGACY.get(slug) or {}
     a = ART[slug]
-    return dict(slug=slug, title=a["title"], tag=a["tag"], seo_title=r.get("title", ""),
+    return dict(slug=slug, title=a["title"], tag=a["tag"], seo_title=ARTICLE_SEO_TITLE.get(slug) or r.get("title", ""),
                 meta=SPAM.sub("", r.get("desc") or ""), lead=lead_for(r),
                 image=IMGMAP.get(r.get("image", "")), body=r.get("body", ""),
                 videos=r.get("videos", []), words=r.get("words", 0), pub=r.get("pub", ""), mod=r.get("mod", ""))

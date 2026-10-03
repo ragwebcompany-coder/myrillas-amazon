@@ -288,6 +288,10 @@ kbd{font:600 .7rem/1 var(--font);padding:.25em .45em;border-radius:3px;backgroun
 
 /* ── sections ───────────────────────────────────────────────── */
 .sec{padding:clamp(48px,6vw,88px) 0}
+.intro{padding:clamp(28px,4vw,52px) 0 clamp(8px,1.5vw,20px)}
+.intro h1{font-size:clamp(1.45rem,2.6vw,2.2rem);line-height:1.15;letter-spacing:-.02em;margin:0 0 .6em;max-width:30ch}
+.intro p:last-child{color:var(--dim);max-width:78ch;margin:0}
+.intro p a{color:var(--blue-2);text-decoration:underline;text-underline-offset:.18em}
 .sec--tight{padding:clamp(28px,4vw,52px) 0}
 .sec__head{max-width:64ch;margin-bottom:clamp(20px,3vw,36px)}
 .sec__head h2{margin-bottom:.35em}

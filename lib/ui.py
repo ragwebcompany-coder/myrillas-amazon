@@ -275,7 +275,7 @@ def footer(depth):
   </div>
   <p class="ft__disclaimer">Το περιεχόμενο είναι ενημερωτικό και δεν υποκαθιστά την ιατρική εξέταση.
     Κάθε περιστατικό αξιολογείται ξεχωριστά στο ιατρείο.</p>
-  <p class="ft__credit">Made by <a href="https://clinicbrain.gr" rel="noopener" target="_blank">CLINICBRAIN</a></p>
+  <p class="ft__credit">Made by <a href="https://astramarketing.gr" rel="noopener" target="_blank">Astra</a></p>
 </footer>'''
 
 
@@ -406,10 +406,10 @@ def hero(depth, slides, extra=""):
         trailer = (f'<button class="btn btn--ghost" type="button" data-video="{h["video"]}" data-vtitle="{html.escape(VID[h["video"]]["title"], quote=True)}">{I["play"]}Trailer</button>'
                    if h.get("video") and h["video"] in VID else "")
         out.append(f'''<div class="hero__slide{" is-on" if i == 0 else ""}" data-slide="{i}" {"aria-hidden=true" if i else ""}>
-  <div class="hero__bg" style="object-position:{h['pos']}">{pic(h['image'], '', depth, eager=(i == 0))}</div>
+  <div class="hero__bg" style="object-position:{h['pos']}">{pic(h['image'], title, depth, eager=(i == 0))}</div>
   <div class="wrap hero__body">
     <p class="hero__kicker">{html.escape(h['kicker'])}</p>
-    <h{1 if i == 0 else 2} class="hero__title">{html.escape(title)}</h{1 if i == 0 else 2}>
+    <h2 class="hero__title">{html.escape(title)}</h2>
     <div class="hero__meta">{prime_badge()}{pills([(s['kind'], ''), (cat.get('short', cat['title']), ''), (f"{eps} ενότητες", ''), (f"{read_minutes(s['words'])} λεπτά", '')])}</div>
     <p class="hero__lead">{html.escape(lead)}</p>
     <div class="hero__acts">
