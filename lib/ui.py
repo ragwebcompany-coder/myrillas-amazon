@@ -114,6 +114,9 @@ def img_size(name):
     return size
 
 
+SMALL_W, SMALL_MIN = 800, 1000  # εικόνες πλατύτερες από SMALL_MIN παίρνουν και έκδοση SMALL_W για κινητά
+
+
 def pic(name, alt, depth, *, w=800, h=450, eager=False, cls="", sizes=""):
     """<picture> με webp από το pipeline του build και το πρωτότυπο ως fallback."""
     if not name:
@@ -127,7 +130,12 @@ def pic(name, alt, depth, *, w=800, h=450, eager=False, cls="", sizes=""):
              f'{" sizes=" + chr(34) + sizes + chr(34) if sizes else ""}'
              f'{" fetchpriority=" + chr(34) + "high" + chr(34) if eager else " loading=" + chr(34) + "lazy" + chr(34)}'
              f' decoding="async"{" class=" + chr(34) + cls + chr(34) if cls else ""}')
-    return (f'<picture><source srcset="{r}assets/img/{stem}.webp" type="image/webp">'
+    webp = f"{r}assets/img/{stem}.webp"
+    srcset = webp
+    if w > SMALL_MIN:
+        # το <source> χρειάζεται δικό του sizes (δεν το παίρνει από το <img>)
+        srcset = f"{r}assets/img/{stem}-{SMALL_W}.webp {SMALL_W}w, {webp} {min(w, 1800)}w\" sizes=\"{sizes or '100vw'}"
+    return (f'<picture><source srcset="{srcset}" type="image/webp">'
             f'<img src="{r}assets/img/{name}"{attrs}></picture>')
 
 
@@ -197,7 +205,7 @@ if(localStorage.getItem('prime:motion')==='"off"')document.documentElement.datas
 
 def wordmark(depth, href=""):
     r = rel(depth)
-    return (f'<a class="tb__logo" href="{r}{href}" aria-label="{SITE["name"]}, αρχική">'
+    return (f'<a class="tb__logo" href="{r}{href}" aria-label="myrillas γυναικολόγος, {SITE["name"]}, αρχική">'
             f'<span class="wm"><span class="wm__t">myrillas</span>'
             f'<svg class="wm__smile" viewBox="0 0 120 22" aria-hidden="true"><path d="M3 5c26 18 76 18 108 3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M104 3l9 4-4 9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
             f'<span class="wm__sub">γυναικολόγος</span></a>')
@@ -367,8 +375,8 @@ def video_card(v, depth, *, wide=True):
     thumb = pic(v["thumb"], v["title"], depth) if v.get("thumb") else \
         f'<img src="https://i.ytimg.com/vi/{v["id"]}/hqdefault.jpg" alt="" loading="lazy" decoding="async" width="480" height="360">'
     return f'''<article class="card card--video{" card--wide" if wide else ""}">
-  <button class="card__link" type="button" data-video="{v['id']}" data-vtitle="{html.escape(v['title'], quote=True)}" aria-label="Αναπαραγωγή: {html.escape(v['title'], quote=True)}">
-    <span class="card__img">{thumb}<span class="card__shade"></span>
+  <button class="card__link" type="button" data-video="{v['id']}" data-vtitle="{html.escape(v['title'], quote=True)}">
+    <span class="vh">Αναπαραγωγή βίντεο: </span><span class="card__img">{thumb}<span class="card__shade"></span>
       <span class="card__play">{I['play']}</span>
       <span class="card__cap"><span class="card__k">{html.escape(v['kicker'])}</span><span class="card__t">{html.escape(v['title'])}</span></span>
     </span>
@@ -389,7 +397,7 @@ def row(*, rid, title, cards, sub="", all_href=None, all_label="Δείτε όλ�
       <button class="row__btn row__nav--r" type="button" aria-label="Επόμενα">{I['right']}</button>
     </div>
   </div>
-  <div class="row__vp row__track" tabindex="0" role="list" aria-label="{html.escape(re.sub(r'<[^>]+>', '', title))}">
+  <div class="row__vp row__track" tabindex="0" role="group" aria-label="{html.escape(re.sub(r'<[^>]+>', '', title))}">
     <div class="row__track-in">{''.join(cards)}</div>
   </div>
 </section>'''
@@ -475,17 +483,26 @@ LINK_ALIAS = {"endomitria-paxynsi": "endomitria-paxinsi", "inomiomata-kindini": 
               "kystes-oothikon": "kystes-oothikon", "ysteroskopisi": "ysteroskopisi"}
 
 
-def _fix_body(body, depth):
+def _fix_body(body, depth, alt=""):
     """Εικόνες και σύνδεσμοι του παλιού site -> τοπικά· βίντεο -> facade."""
     r = rel(depth)
+    # Μέσα σε κάθε επεισόδιο (h2) οι υπότιτλοι ξεκινούν από h3 χωρίς κενά επιπέδου (π.χ. h4 χωρίς h3 → h3).
+    body = re.sub(r"<h([1-6])[^>]*>(?:\s|&nbsp;|<br\s*/?>|<strong>\s*</strong>)*</h\1>", "", body)
+    # επικεφαλίδα που έχει μόνο εικόνα (χωρίς κείμενο) → παράγραφος
+    body = re.sub(r"<h([1-6])[^>]*>(.*?)</h\1>",
+                  lambda m: f"<p>{m.group(2)}</p>" if not plain(m.group(2)).strip() else m.group(0), body, flags=re.S)
+    levels = sorted({int(x) for x in re.findall(r"<h([3-6])[\s>]", body)})
+    remap = {old: new for new, old in enumerate(levels, 3)}
+    if any(o != n for o, n in remap.items()):
+        body = re.sub(r"<(/?)h([3-6])\b", lambda m: f"<{m.group(1)}h{remap[int(m.group(2))]}", body)
 
     def img(m):
         src = m.group(1).strip()
-        alt = re.search(r'alt="([^"]*)"', m.group(0))
         local = IMGMAP.get(src) or IMGMAP.get(src.replace("https://kmyrillas.gr", ""))
         if not local:
             return ""
-        return pic(local, alt.group(1) if alt else "", depth)
+        text = (m_alt.group(1).strip() if (m_alt := re.search(r'alt="([^"]*)"', m.group(0))) else "") or alt
+        return pic(local, text, depth)
     body = re.sub(r'<img[^>]*src="([^"]+)"[^>]*>', img, body)
 
     def vid(m):
@@ -540,7 +557,15 @@ def _fix_body(body, depth):
     return body
 
 
-def episodes(body, depth, *, slug, single_title="Το κείμενο"):
+def _img_alt(title, section):
+    """Περιγραφή για εικόνες του κειμένου που δεν είχαν alt στο WordPress: θέμα + ενότητα."""
+    title, section = title.strip(), section.strip()
+    if not section or section in ("Εισαγωγή", "Το κείμενο", "Το άρθρο") or section.lower().startswith(title.lower()):
+        return section if section not in ("Εισαγωγή", "Το κείμενο", "Το άρθρο") else title
+    return f"{title}: {section}" if title else section
+
+
+def episodes(body, depth, *, slug, single_title="Το κείμενο", title=""):
     eps = episodes_of(body)
     if not eps:
         return "", 0
@@ -553,11 +578,11 @@ def episodes(body, depth, *, slug, single_title="Το κείμενο"):
         items.append(f'''<details class="ep" id="ep-{i}" data-ep="{i}"{" open" if i == 1 else ""}>
   <summary class="ep__s">
     <span class="ep__n">{i}</span>
-    <span class="ep__t"><b>{html.escape(t)}</b><span class="ep__m">{read_minutes(words)} λεπτά · {words} λέξεις</span></span>
+    <h2 class="ep__t">{html.escape(t)}</h2><span class="ep__m">{read_minutes(words)} λεπτά · {words} λέξεις</span>
     <span class="ep__done" data-ep-done aria-label="Διαβάστηκε">{I['check']}</span>
     <span class="ep__chev">{I['chev']}</span>
   </summary>
-  <div class="ep__body prose">{_fix_body(h, depth)}</div>
+  <div class="ep__body prose">{_fix_body(h, depth, alt=_img_alt(title, t))}</div>
 </details>''')
     head = "" if total == 1 else f'''<div class="eps__head">
   <p class="eps__count">Σεζόν 1 · {total} {"επεισόδια" if total > 1 else "επεισόδιο"}</p>
@@ -586,7 +611,7 @@ def review(t, depth):
     r = rel(depth)
     svc = SVC.get(t["topic"])
     return f'''<article class="rev">
-  <div class="rev__stars" aria-label="5 από 5">{I['star'] * 5}</div>
+  <div class="rev__stars" role="img" aria-label="5 από 5">{I['star'] * 5}</div>
   <blockquote class="rev__q">«{html.escape(t['text'])}»</blockquote>
   <p class="rev__by"><b>{html.escape(t['name'])}</b> από {html.escape(t['place'])}
     {f'· <a href="{r}services/{svc["slug"]}/">{html.escape(svc["title"])}</a>' if svc else ''}</p>

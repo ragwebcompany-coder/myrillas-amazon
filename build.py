@@ -17,8 +17,8 @@ import content as C
 import ui as U
 from content import (SITE, CATEGORIES, CAT, SERVICES, SVC, ARTICLES, VIDEOS, VID, VIDEO_GROUPS,
                      TESTIMONIALS, TIMELINE, MEMBERSHIPS, STUDIES, PRESS, HERO, TOP10, IMGMAP,
-                     rel, read_minutes, pretty_date, plain, shorten, related_articles, article_rec,
-                     ARTICLE_TWIN, TODAY)
+                     rel, read_minutes, video_ld, pretty_date, plain, shorten, related_articles, article_rec,
+                     ARTICLE_TWIN, TODAY, LAUNCH)
 
 PDF_HREF = "assets/docs/2021-11-sel-2-compressed.pdf"
 PDF_COVER = "2015-05-sel.jpg"
@@ -36,7 +36,7 @@ def write(path, markup):
 
 
 def register(url, prio="0.6", freq="monthly", lastmod=None, img=None):
-    PAGES.append((url, prio, freq, lastmod or TODAY, img))
+    PAGES.append((url, prio, freq, max(lastmod or LAUNCH, LAUNCH), img))
 
 
 def index(url, *, title, desc, kind, img=None, kw="", video=None, xray=None):
@@ -142,7 +142,7 @@ def build_home():
       <span><h3>{html.escape(p['name'])}</h3><p>{html.escape(p['text'])}</p>
       <span class="ext">{'Επίσκεψη στο site' if p['url'] else 'Περισσότερα'} {U.I['ext'] if p['url'] else ''}</span></span></a>''' for p in SITE["partners"])
     hero_pdf = f'''<div class="wrap hero__pdfw"><a class="hero__pdf" href="{PDF_HREF}" target="_blank" rel="noopener">
-    <span class="hero__pdf-cover">{U.pic(PDF_COVER, "", d)}</span>
+    <span class="hero__pdf-cover">{U.pic(PDF_COVER, "Εξώφυλλο: Χειρουργική ελάχιστης παρέμβασης, Κ. Μυρίλλας", d)}</span>
     <span class="hero__pdf-txt"><span class="hero__pdf-k">Το έντυπο του ιατρείου</span>
       <span class="hero__pdf-t">{SITE['pdf_title']}</span>
       <span class="btn btn--blue">Διαβάστε το PDF</span></span></a></div>'''
@@ -281,7 +281,7 @@ def faq_ld(slug):
 def build_service(s):
     d, slug = 2, s["slug"]
     cat = CAT[s["cat"]]
-    eps_html, n = U.episodes(s["body"], d, slug=f"services/{slug}/")
+    eps_html, n = U.episodes(s["body"], d, slug=f"services/{slug}/", title=s["title"])
     eps = U.episodes_of(s["body"])
     crumb, crumb_ld = U.crumbs([("Αρχική", ""), (cat["title"], f"katigoria/{cat['slug']}/"), (s["title"], None)], d)
     sib = [U.card(x, d) for x in SERVICES if x["cat"] == s["cat"] and x["slug"] != slug]
@@ -330,7 +330,7 @@ def build_service(s):
     write(f"services/{slug}/index.html",
           shell(path=f"services/{slug}/", title=C.seo_title(s["seo_title"] or s["title"]), desc=meta_desc, depth=d,
                 body=body, active=cat["slug"] if cat["slug"] in ("maieftiki", "gynaikologia", "xeirourgiki") else "services",
-                jsonld=[x for x in (service_ld(s, eps), crumb_ld, faq_ld(slug)) if x], og_image=s["image"], kind="article",
+                jsonld=[x for x in (service_ld(s, eps), crumb_ld, faq_ld(slug), trailer and video_ld(VID[trailer])) if x], og_image=s["image"], kind="article",
                 page_meta={"t": s["title"], "u": f"services/{slug}/", "img": s["image"], "k": f"{s['kind']} · {cat['title']}"}))
     register(f"services/{slug}/", "0.9", img=s["image"])
     index(f"services/{slug}/", title=s["title"], desc=f"{s['kind']} · {cat['title']}", kind="service", img=s["image"],
@@ -376,20 +376,37 @@ def build_category(c):
                 arts.append(a)
     a_cards = [U.card(article_rec(a["slug"]), d, kind="article") for a in arts[:10]]
     others = "".join(f'<a class="chip{" is-on" if x["slug"] == c["slug"] else ""}" href="../{x["slug"]}/">{x["title"]}</a>' for x in CATEGORIES)
+    links = [f'<a href="../../services/{x["slug"]}/">{html.escape(x["title"])}</a>' for x in items]
+    listed = links[0] if len(links) == 1 else ", ".join(links[:-1]) + " και " + links[-1]
+    intro = (f'<h2>{html.escape(c["title"])} στο ιατρείο του Κ. Μυρίλλα</h2>'
+             f'<p>{html.escape(c["blurb"])} Σε αυτή την ενότητα ο μαιευτήρας χειρουργός γυναικολόγος {SITE["doctor"]} '
+             f'εξηγεί {"τα θέματα" if len(items) > 1 else "το θέμα"}: {listed}. '
+             f'{"Κάθε σελίδα περιγράφει" if len(items) > 1 else "Η σελίδα περιγράφει"} τι είναι, πώς γίνεται η διάγνωση και ποιες είναι οι επιλογές αντιμετώπισης, '
+             f'με βίντεο από πραγματικές επεμβάσεις όπου υπάρχουν.</p>'
+             f'<p>Το ιατρείο βρίσκεται στη {SITE["address"]}, {SITE["locality"]}. Για ραντεβού ή ερωτήσεις καλέστε στο '
+             f'<a href="tel:{SITE["phone_href"]}">{SITE["phone"]}</a> ή δείτε τα στοιχεία στη σελίδα '
+             f'<a href="../../epikinonia/">επικοινωνίας</a>.</p>')
+    coll = {"@context": "https://schema.org", "@type": "CollectionPage", "name": c["title"], "inLanguage": "el",
+            "url": f"{SITE['domain']}/katigoria/{c['slug']}/", "description": c["blurb"],
+            "about": {"@id": SITE["domain"] + "/#physician"},
+            "mainEntity": {"@type": "ItemList", "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "url": f"{SITE['domain']}/services/{x['slug']}/", "name": x["title"]}
+                for i, x in enumerate(items)]}}
     body = f'''<section class="th"><div class="wrap th__in"><div class="th__text">{crumb}
   <p class="th__kicker">Κατηγορία · {len(items)} {"θέματα" if len(items) > 1 else "θέμα"}</p>
   <h1 class="th__title">{html.escape(c['title'])}</h1>
   <p class="th__lead">{html.escape(c['blurb'])}</p>
   <div class="chips">{others}</div></div></div></section>
 <main id="main">
-  <section class="sec sec--tight"><div class="wrap"><div class="grid">{grid}</div></div></section>
+  <section class="sec sec--tight"><div class="wrap"><h2 class="vh">Θέματα: {html.escape(c['title'])}</h2><div class="grid">{grid}</div></div></section>
+  <section class="sec sec--tight"><div class="wrap prose" style="max-width:820px">{intro}</div></section>
   {U.row(rid="r-vid", title="Βίντεο", cards=vids, all_href="../../video-gallery/", all_label="Όλα τα βίντεο") if vids else ""}
   {U.row(rid="r-art", title="Σχετικά άρθρα", cards=a_cards, all_href="../../blog/") if a_cards else ""}
   {U.cta_band(d)}
 </main>'''
     write(f"katigoria/{c['slug']}/index.html", shell(path=f"katigoria/{c['slug']}/", title=f"{c['title']} | Γυναικολόγος Κ. Μυρίλλας, Αθήνα",
           desc=f"{c['title']}: {c['blurb']} Θέματα, βίντεο και άρθρα από τον μαιευτήρα χειρουργό γυναικολόγο Κ. Μυρίλλα.",
-          depth=d, body=body, active=c["slug"], jsonld=[crumb_ld]))
+          depth=d, body=body, active=c["slug"], jsonld=[crumb_ld, coll]))
     register(f"katigoria/{c['slug']}/", "0.7", "weekly")
     index(f"katigoria/{c['slug']}/", title=c["title"], desc=c["blurb"], kind="page", kw=" ".join(SVC[s]["title"] for s in c["services"]))
 
@@ -401,7 +418,7 @@ def build_article(a):
     d, slug = 1, a["slug"]
     r = article_rec(slug)
     twin = ARTICLE_TWIN.get(slug)
-    eps_html, n = U.episodes(r["body"], d, slug=f"{slug}/", single_title="Το άρθρο")
+    eps_html, n = U.episodes(r["body"], d, slug=f"{slug}/", single_title="Το άρθρο", title=a["title"])
     eps = U.episodes_of(r["body"])
     crumb, crumb_ld = U.crumbs([("Αρχική", ""), ("Άρθρα", "blog/"), (a["title"], None)], d)
     same = [x for x in ARTICLES if x["tag"] == a["tag"] and x["slug"] != slug][:8]
@@ -444,7 +461,7 @@ def build_article(a):
             "eps": [t for t, _ in eps][:12], "videos": [[v, VID[v]["title"]] for v in r["videos"] if v in VID][:5],
             "rel": [[f"services/{s['slug']}/", s["title"]] for s in svc_hits[:4]]}
     write(f"{slug}/index.html", shell(path=f"{slug}/", title=C.seo_title(r["seo_title"] or a["title"]),
-          desc=(r["meta"] or r["lead"])[:158], depth=d, body=body, active="blog", jsonld=[ld, crumb_ld],
+          desc=(r["meta"] or r["lead"])[:158], depth=d, body=body, active="blog", jsonld=[x for x in (ld, crumb_ld, trailer and video_ld(VID[trailer])) if x],
           og_image=r["image"], kind="article",
           canonical=f"services/{twin}/" if twin and twin in SVC else None,
           page_meta={"t": a["title"], "u": f"{slug}/", "img": r["image"], "k": f"Άρθρο · {a['tag']}"}))
@@ -498,11 +515,8 @@ def build_videos():
     chips = '<button class="chip is-on" type="button" data-filter-tag="all">Όλα</button>' + "".join(
         f'<button class="chip" type="button" data-filter-tag="{html.escape(gt)}">{html.escape(gt)}</button>' for gt, _, _ in VIDEO_GROUPS)
     ld = {"@context": "https://schema.org", "@type": "ItemList", "name": "Βίντεο του ιατρείου",
-          "itemListElement": [{"@type": "ListItem", "position": i + 1, "item": {
-              "@type": "VideoObject", "name": v["title"], "description": v["title"] + " · " + v["group"],
-              "thumbnailUrl": f"https://i.ytimg.com/vi/{v['id']}/hqdefault.jpg",
-              "embedUrl": f"https://www.youtube-nocookie.com/embed/{v['id']}", "uploadDate": "2022-01-01"}}
-              for i, v in enumerate(VIDEOS)]}
+          "itemListElement": [{"@type": "ListItem", "position": i + 1, "item": video_ld(v, context=False)}
+                              for i, v in enumerate(v for v in VIDEOS if video_ld(v))]}
     body = f'''<section class="th"><div class="wrap th__in"><div class="th__text">{crumb}
   <p class="th__kicker">{len(VIDEOS)} βίντεο από το κανάλι του ιατρείου</p>
   <h1 class="th__title">Βίντεο</h1>
@@ -563,7 +577,7 @@ def build_doctor():
     body_html = C.DOCTOR_BODY
     body_html = body_html.split("Μελέτες")[0]
     body_html = re.sub(r'^.*?</p>\s*', "", body_html, count=1, flags=re.S)  # crumbs + φωτογραφία
-    body_html = U._fix_body(body_html, d)
+    body_html = U._fix_body(body_html, d, alt=SITE["doctor"])
     tl = "".join(f"<li><b>{html.escape(y)}</b><p>{html.escape(t)}</p></li>" for y, t in TIMELINE)
     mem = "".join(f"<li>{html.escape(m)}</li>" for m in MEMBERSHIPS)
     st = "".join(f"<li>{html.escape(m)}</li>" for m in STUDIES)
@@ -628,7 +642,7 @@ def build_contact():
   </div></div></div></section>
 <main id="main"><section class="sec sec--tight"><div class="wrap contact">
   <div>
-    <div class="panel" style="margin-bottom:1rem"><h3>Στοιχεία</h3>
+    <div class="panel" style="margin-bottom:1rem"><h2>Στοιχεία</h2>
       <dl class="dl">
         <div><dt>Διεύθυνση</dt><dd>{SITE['address']}, {SITE['locality']} {SITE['postcode']}</dd></div>
         <div><dt>Τηλέφωνο</dt><dd><a href="tel:{SITE['phone_href']}">{SITE['phone']}</a></dd></div>
@@ -637,11 +651,11 @@ def build_contact():
         <div><dt>Email</dt><dd><a href="mailto:{SITE['email']}">{SITE['email']}</a></dd></div>
         <div><dt>Χειρουργεία</dt><dd>{SITE['hospital']}</dd></div>
       </dl></div>
-    <div class="panel"><h3>Ώρες ιατρείου</h3><ul class="hours">{hours}</ul></div>
+    <div class="panel"><h2>Ώρες ιατρείου</h2><ul class="hours">{hours}</ul></div>
   </div>
   <div>
     <a class="contact__map" href="{SITE['map_url']}" rel="noopener" target="_blank">{U.pic('2023-04-screenshot-19.webp', 'Χάρτης: ' + SITE['address'] + ', ' + SITE['locality'], d)}<span>Άνοιγμα στους Χάρτες Google</span></a>
-    <div class="panel" style="margin-top:1rem"><h3>Φόρμα</h3><p>Η φόρμα ραντεβού ετοιμάζει ένα email προς {SITE['email']} που ελέγχετε πριν φύγει. Τίποτα δεν αποθηκεύεται στον ιστότοπο.</p>
+    <div class="panel" style="margin-top:1rem"><h2>Φόρμα</h2><p>Η φόρμα ραντεβού ετοιμάζει ένα email προς {SITE['email']} που ελέγχετε πριν φύγει. Τίποτα δεν αποθηκεύεται στον ιστότοπο.</p>
       <button class="btn btn--blue" type="button" data-open="book">Ζητήστε ραντεβού</button></div>
   </div>
 </div></section></main>'''
@@ -711,17 +725,17 @@ def build_terms():
     body = f'''<section class="th"><div class="wrap th__in"><div class="th__text">{crumb}
   <h1 class="th__title">Όροι χρήσης & απόρρητο</h1></div></div></section>
 <main id="main"><section class="sec sec--tight"><div class="wrap wrap--narrow prose">
-  <h3>Περιεχόμενο</h3>
+  <h2>Περιεχόμενο</h2>
   <p>Ο ιστότοπος kmyrillas.gr ανήκει στον μαιευτήρα χειρουργό γυναικολόγο Κωνσταντίνο Μυρίλλα ({SITE['address']}, {SITE['locality']}).
     Το περιεχόμενο είναι ενημερωτικό, δεν υποκαθιστά την ιατρική εξέταση και δεν αποτελεί ιατρική συμβουλή για συγκεκριμένο περιστατικό.</p>
-  <h3>Προσωπικά δεδομένα</h3>
+  <h2>Προσωπικά δεδομένα</h2>
   <p>Ο ιστότοπος δεν διαθέτει server-side φόρμες και δεν αποθηκεύει προσωπικά δεδομένα. Η φόρμα ραντεβού συνθέτει ένα email στο
     πρόγραμμα αλληλογραφίας σας, το οποίο ελέγχετε και στέλνετε εσείς προς {SITE['email']}. Τα στοιχεία που μας στέλνετε χρησιμοποιούνται
     μόνο για την επικοινωνία μαζί σας.</p>
-  <h3>Τοπικά δεδομένα</h3>
+  <h2>Τοπικά δεδομένα</h2>
   <p>Το προφίλ, η λίστα σας και η πρόοδος ανάγνωσης αποθηκεύονται μόνο στον browser σας (localStorage) και δεν αποστέλλονται πουθενά.
     Μπορείτε να τα διαγράψετε από το εικονίδιο προφίλ.</p>
-  <h3>Τρίτοι</h3>
+  <h2>Τρίτοι</h2>
   <p>Τα βίντεο φορτώνουν από το YouTube (youtube-nocookie.com) μόνο όταν πατήσετε αναπαραγωγή. Οι γραμματοσειρές φορτώνουν από το Google Fonts.
     Ο χάρτης ανοίγει στους Χάρτες Google σε νέα καρτέλα.</p>
 </div></section></main>'''
@@ -772,6 +786,17 @@ def images():
                 n += 1
             except Exception as e:
                 print("  webp skipped", f, e)
+        # μικρότερη έκδοση για κινητά (το pic() τη δίνει στο srcset)
+        small = os.path.join(dst, stem + f"-{U.SMALL_W}.webp")
+        if Image and (not os.path.exists(small) or os.path.getmtime(small) < os.path.getmtime(src)):
+            try:
+                im = Image.open(src)
+                if im.width > U.SMALL_MIN:
+                    im = im.convert("RGBA") if im.mode in ("P", "LA") else im.convert("RGB") if im.mode != "RGBA" else im
+                    im.resize((U.SMALL_W, round(im.height * U.SMALL_W / im.width)), Image.LANCZOS).save(small, "WEBP", quality=80, method=6)
+                    n += 1
+            except Exception as e:
+                print("  small webp skipped", f, e)
     with open(os.path.join(dst, "favicon.svg"), "w", encoding="utf-8") as fh:
         fh.write(FAVICON)
     if Image:
@@ -895,6 +920,10 @@ def absolutize():
 def github_pages():
     """GitHub Pages: CNAME για το kmyrillas.gr, χωρίς Jekyll, και redirects με HTML (δεν διαβάζει vercel.json)."""
     write("CNAME", SITE["domain"].split("//")[1] + "\n")
+    # PDF του παλιού site που μπορεί να είναι στη Google: μένει και στην παλιά του διεύθυνση
+    for old, new in (("wp-content/uploads/2015/05/sel.pdf", "2015-05-sel.pdf"),):
+        os.makedirs(os.path.dirname(os.path.join(OUT, old)), exist_ok=True)
+        shutil.copy(os.path.join(SRC, "assets", "docs", new), os.path.join(OUT, old))
     write(".nojekyll", "")
     for a, b in REDIRECTS:
         if ":n" in a or not a.endswith("/") or os.path.exists(os.path.join(OUT, a.strip("/"), "index.html")):

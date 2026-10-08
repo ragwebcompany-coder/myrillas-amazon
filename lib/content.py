@@ -30,6 +30,9 @@ for _r in LEGACY.values():
     if isinstance(_r, dict) and "<h1" in (_r.get("body") or ""):
         _r["body"] = re.sub(r"<(/?)h1\b[^>]*>", r"<\1h2>", _r["body"])
 TODAY = datetime.date.today().isoformat()
+# Η μέρα που ανέβηκε το νέο site (όλες οι σελίδες ξαναγράφτηκαν). Το lastmod του sitemap δεν πρέπει να
+# αλλάζει σε κάθε build, αλλιώς η Google το θεωρεί αναξιόπιστο· αλλάξτε το μόνο όταν αλλάζει περιεχόμενο.
+LAUNCH = "2026-10-08"
 
 # ── το ιατρείο ───────────────────────────────────────────────────────────────
 SITE = dict(
@@ -200,6 +203,27 @@ for _g, (_gt, _gk, _ids) in enumerate(VIDEO_GROUPS):
         VIDEOS.append(dict(id=_i, title=_clean_title(_title), group=_gt, kicker=_gk,
                            thumb=VIDEO_THUMBS.get(_i)))
 VID = {v["id"]: v for v in VIDEOS}
+# ημερομηνία, διάρκεια και περιγραφή από τη σελίδα κάθε βίντεο στο YouTube (Οκτ. 2026)
+YT_META = json.load(open(os.path.join(CONTENT, "yt-meta.json"), encoding="utf-8"))
+
+
+def video_ld(v, *, context=True):
+    """VideoObject με τα πραγματικά στοιχεία του YouTube (η Google δεν δέχεται χωρίς uploadDate)."""
+    m = YT_META.get(v["id"]) or {}
+    if not m.get("uploadDate"):
+        return None
+    desc = " ".join((m.get("description") or "").split())
+    if len(desc) < 40:
+        desc = f"{v['title']}. {v['kicker']} από τον μαιευτήρα χειρουργό γυναικολόγο {SITE['doctor']}."
+    ld = {"@type": "VideoObject", "name": v["title"], "description": desc[:300],
+          "thumbnailUrl": f"https://i.ytimg.com/vi/{v['id']}/hqdefault.jpg",
+          "uploadDate": m["uploadDate"], "embedUrl": f"https://www.youtube-nocookie.com/embed/{v['id']}",
+          "contentUrl": f"https://www.youtube.com/watch?v={v['id']}", "inLanguage": "el",
+          "author": {"@id": SITE["domain"] + "/#physician"}}
+    if m.get("seconds"):
+        mm, ss = divmod(m["seconds"], 60)
+        ld["duration"] = f"PT{mm}M{ss}S"
+    return {"@context": "https://schema.org", **ld} if context else ld
 
 # ── μαρτυρίες, όπως δημοσιεύονται στο site ───────────────────────────────────
 TESTIMONIALS = [

@@ -166,8 +166,10 @@ function syncSaves() {
     var it; try { it = JSON.parse(b.dataset.save); } catch (e) { return; }
     var on = listHas(it.id);
     b.setAttribute("aria-pressed", on ? "true" : "false");
-    b.setAttribute("aria-label", (on ? "Αφαίρεση από τη λίστα μου: " : "Προσθήκη στη λίστα μου: ") + it.t);
     var lab = b.querySelector("span"); if (lab && b.classList.contains("save-inline")) lab.textContent = on ? "Στη λίστα" : "Η λίστα μου";
+    // το ορατό κείμενο πρέπει να ξεκινά το προσβάσιμο όνομα (WCAG 2.5.3)
+    b.setAttribute("aria-label", lab && b.classList.contains("save-inline") ? lab.textContent + ": " + it.t
+      : (on ? "Αφαίρεση από τη λίστα μου: " : "Προσθήκη στη λίστα μου: ") + it.t);
   });
 }
 D.addEventListener("click", function (e) {
