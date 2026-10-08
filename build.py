@@ -799,12 +799,15 @@ def assets():
     images()
 
 
-def redirects():
-    old = [("/dr-k-myrillas/", "/gynaikologos-dr-k-myrillas/"), ("/newsletter/", "/"), ("/robotiki-xeirourgiki/", "/services/robotiki-xeirourgiki/"),
+REDIRECTS = [("/dr-k-myrillas/", "/gynaikologos-dr-k-myrillas/"), ("/newsletter/", "/"), ("/robotiki-xeirourgiki/", "/services/robotiki-xeirourgiki/"),
            ("/testimonials/", "/"), ("/blog/page/:n/", "/blog/"),
            # παλιά URL του WordPress που είχε ήδη η Google
            ("/sitemap_index.xml", "/sitemap.xml"), ("/page-sitemap.xml", "/sitemap.xml"), ("/post-sitemap.xml", "/sitemap.xml"),
            ("/feed/", "/blog/"), ("/comments/feed/", "/blog/"), ("/author/:n/", "/gynaikologos-dr-k-myrillas/")]
+
+
+def redirects():
+    old = REDIRECTS
     with open(os.path.join(OUT, "_redirects"), "w") as f:
         for a, b in old:
             f.write(f"{a.replace(':n', '*')}  {b}  301\n")
@@ -889,6 +892,29 @@ def absolutize():
     return n
 
 
+def github_pages():
+    """GitHub Pages: CNAME για το kmyrillas.gr, χωρίς Jekyll, και redirects με HTML (δεν διαβάζει vercel.json)."""
+    write("CNAME", SITE["domain"].split("//")[1] + "\n")
+    write(".nojekyll", "")
+    for a, b in REDIRECTS:
+        if ":n" in a or not a.endswith("/") or os.path.exists(os.path.join(OUT, a.strip("/"), "index.html")):
+            continue
+        to = SITE["domain"] + b
+        write(a.strip("/") + "/index.html",
+              f'<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Μεταφέρθηκε</title>'
+              f'<link rel="canonical" href="{to}"><meta name="robots" content="noindex">'
+              f'<meta http-equiv="refresh" content="0; url={to}"><script>location.replace("{to}"+location.hash)</script>'
+              f'</head><body><a href="{to}">{to}</a></body></html>\n')
+    # μοτίβα (blog/page/N/, author/X/): τα πιάνει η 404
+    js = ('<script>(function(p){var m={"^/blog/page/\\\\d+/?$":"/blog/","^/author/[^/]+/?$":"/gynaikologos-dr-k-myrillas/"};'
+          'for(var k in m)if(new RegExp(k).test(p)){location.replace(m[k]);return}})(location.pathname)</script>')
+    full = os.path.join(OUT, "404.html")
+    with open(full, encoding="utf-8") as fh:
+        page = fh.read()
+    with open(full, "w", encoding="utf-8") as fh:
+        fh.write(page.replace("</head>", js + "\n</head>", 1))
+
+
 def sitemap():
     def image(i):
         return f"<image:image><image:loc>{SITE['domain']}/assets/img/{i}</image:loc></image:image>" if i else ""
@@ -925,6 +951,7 @@ def main():
     redirects(); sitemap()
     if "--relative" not in sys.argv:
         print(f"  absolute links in {absolutize()} files")
+    github_pages()
     print(f"  {len(PAGES)} pages, {len(SEARCH)} search rows → {OUT}")
 
 
