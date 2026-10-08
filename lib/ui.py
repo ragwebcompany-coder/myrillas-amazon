@@ -270,6 +270,7 @@ def footer(depth):
       <li><a href="{r}odigos/">Τι με αφορά;</a></li>
       <li><a href="{r}i-lista-mou/">Η λίστα μου</a></li>
       <li><a href="{r}epikinonia/">Επικοινωνία</a></li>
+      <li><a href="{r}gynaikologos-perioxes/">Περιοχές</a></li>
     </ul></div>
     <div class="ft__nap"><h3>Ιατρείο</h3>
       <ul class="ft__contact">

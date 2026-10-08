@@ -15,6 +15,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "lib"))
 import content as C
 import ui as U
+from areas import AREA_PAGES, sto
+from urllib.parse import quote
 from content import (SITE, CATEGORIES, CAT, SERVICES, SVC, ARTICLES, VIDEOS, VID, VIDEO_GROUPS,
                      TESTIMONIALS, TIMELINE, MEMBERSHIPS, STUDIES, PRESS, HERO, TOP10, IMGMAP,
                      rel, read_minutes, video_ld, pretty_date, plain, shorten, related_articles, article_rec,
@@ -64,7 +66,7 @@ def physician_ld():
             "telephone": SITE["phone_href"], "email": SITE["email"], "address": address_ld(),
             "geo": {"@type": "GeoCoordinates", "latitude": SITE["lat"], "longitude": SITE["lng"]},
             "hasMap": SITE["map_url"], "medicalSpecialty": ["Obstetric", "Gynecologic"],
-            "areaServed": [{"@type": "City", "name": a} for a in SITE["areas"]],
+            "areaServed": [{"@type": "Place", "name": a["name"], "url": f"{SITE['domain']}/{a['url']}"} for a in AREA_PAGES],
             "contactPoint": [{"@type": "ContactPoint", "contactType": "appointments", "telephone": t,
                               "availableLanguage": ["el", "en"]} for t in (SITE["phone_href"], SITE["mobile_href"])],
             "alumniOf": {"@type": "CollegeOrUniversity", "name": "Ιατρική Σχολή Πανεπιστημίου Αθηνών"},
@@ -744,6 +746,155 @@ def build_terms():
     register("oroi-chrisis/", "0.1")
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ΤΟΠΙΚΕΣ ΣΕΛΙΔΕΣ «Γυναικολόγος <περιοχή>»
+# ══════════════════════════════════════════════════════════════════════════════
+# Θέματα που εναλλάσσονται ανά περιοχή, ώστε κάθε σελίδα να δείχνει άλλη επιλογή.
+AREA_TOPICS = ["progennitikos-elegxos", "hpv-limoksi", "inomyomata-mitras", "ysteroskopisi",
+               "endomitriosi-symptomata-diagnosi-therapeia", "kolposkopisi", "laparoskopikes-epemvaseis",
+               "syndromo-polykystikon-oothikon", "emminopafsi-symptomata-therapeia", "robotiki-xeirourgiki",
+               "kystes-oothikon", "poreia-egkymosynis-exetaseis", "katapsyksi-kryosyntirisi-oarion", "fysiologikos-toketos"]
+CLINIC_FULL = f"{SITE['address']}, {SITE['locality']} {SITE['postcode']}"
+
+
+def spread(n_items, k, n_pages):
+    """Για κάθε σελίδα k από n_items δείκτες, ώστε δύο σελίδες να μοιράζονται όσο λιγότερα γίνεται
+    (λιγότερη επικάλυψη = λιγότερο «αντίγραφο» για τη Google). Ντετερμινιστικό: ίδιο αποτέλεσμα σε κάθε build."""
+    from itertools import combinations
+    chosen, used = [], [0] * n_items
+    for _ in range(n_pages):
+        best = min(combinations(range(n_items), k), key=lambda c: (
+            max((len(set(c) & p) for p in chosen), default=0),
+            sum(len(set(c) & p) for p in chosen), sum(used[x] for x in c), c))
+        chosen.append(set(best))
+        for x in best:
+            used[x] += 1
+    return [sorted(c) for c in chosen]
+
+
+def area_faq(a, i):
+    """Η πρώτη ερώτηση αφορά την περιοχή· από τις υπόλοιπες κάθε σελίδα παίρνει άλλες τρεις."""
+    home = a["slug"] == "vyronas"
+    where = "Το ιατρείο βρίσκεται στον Βύρωνα" if home else f"Το ιατρείο απέχει {a['km_text']} σε ευθεία από {a['acc']}"
+    first = (f"Πού βρίσκεται το ιατρείο γυναικολόγου κοντά {sto(a['acc'])};",
+             f"{where}, στη διεύθυνση {CLINIC_FULL}. Οδηγίες για να έρθετε θα βρείτε στους Χάρτες Google.")
+    pool = [
+        ("Ποιες ημέρες και ώρες δέχεται ο γιατρός;",
+         f"{SITE['hours_short']}. Τρίτη και Παρασκευή κατόπιν ραντεβού· Σάββατο και Κυριακή το ιατρείο είναι κλειστό."),
+        ("Πώς κλείνω ραντεβού;",
+         f"Τηλεφωνικά στο {SITE['phone']} ή στο κινητό {SITE['mobile']}, ή με email στο {SITE['email']}."),
+        ("Πού γίνονται οι επεμβάσεις και οι τοκετοί;",
+         f"Στο {SITE['hospital']}, όπου ο γιατρός χειρουργεί και ξεγεννά."),
+        ("Κάνει ο γιατρός λαπαροσκοπικές και ρομποτικές επεμβάσεις;",
+         "Ναι. Ο γιατρός εξειδικεύεται στη χειρουργική ελάχιστης παρέμβασης: λαπαροσκόπηση, υστεροσκόπηση και ρομποτική χειρουργική."),
+        ("Παρακολουθεί ο γιατρός την εγκυμοσύνη μέχρι τον τοκετό;",
+         f"Ναι, από τον προγεννητικό έλεγχο και τις εξετάσεις κάθε τριμήνου μέχρι τον τοκετό στο {SITE['hospital']}."),
+        ("Μιλάει ο γιατρός αγγλικά;",
+         "Ναι, το ραντεβού και η επίσκεψη μπορούν να γίνουν στα ελληνικά ή στα αγγλικά."),
+        ("Τι τίτλους έχει ο γιατρός;",
+         "Είναι απόφοιτος της Ιατρικής Σχολής του Πανεπιστημίου Αθηνών και μέλος του Royal College of Obstetricians and Gynaecologists (M.R.C.O.G.)."),
+    ]
+    return [first] + [pool[j] for j in FAQ_PICK[i]]
+
+
+TOPIC_PICK = spread(len(AREA_TOPICS), 6, len(AREA_PAGES))
+FAQ_PICK = spread(7, 3, len(AREA_PAGES))
+
+
+def build_areas():
+    for i, a in enumerate(AREA_PAGES):
+        d, home = 1, a["slug"] == "vyronas"
+        crumb, crumb_ld = U.crumbs([("Αρχική", ""), ("Περιοχές", "gynaikologos-perioxes/"), (a["name"], None)], d)
+        h1 = "Γυναικολόγος στον Βύρωνα" if home else f"Γυναικολόγος κοντά {sto(a['acc'])}"
+        kicker = "Το ιατρείο είναι στον Βύρωνα" if home else f"Ιατρείο στον Βύρωνα · {a['km_text']} από {a['acc']}"
+        directions = ("https://www.google.com/maps/dir/?api=1&origin=" + quote(f"{a['name']}, Αθήνα")
+                      + "&destination=" + quote(CLINIC_FULL))
+        topics = [SVC[AREA_TOPICS[j]] for j in TOPIC_PICK[i] if AREA_TOPICS[j] in SVC]
+        cards = "".join(U.card(t, d) for t in topics)
+        near = "".join(f'<a class="chip" href="../{b["url"]}">Γυναικολόγος {html.escape(b["name"])}</a>' for b in a["near"])
+        faq = area_faq(a, i)
+        faq_html = "".join(f"<h3>{html.escape(q)}</h3><p>{html.escape(x)}</p>" for q, x in faq)
+        others = ", ".join(b["name"] for b in a["near"][:3])
+        local = (f'<p>{a["name"]}: {a["municipality"]}. '
+                 + ("Εδώ βρίσκεται το ιατρείο" if home else f"Η περιοχή βρίσκεται {a['direction']} του ιατρείου, {a['km_text']} σε ευθεία")
+                 + f'. Κοντινές περιοχές: {others}.</p>')
+        intro = (f'<p>Ο {SITE["doctor"]} είναι μαιευτήρας χειρουργός γυναικολόγος, μέλος του Royal College of Obstetricians '
+                 f'and Gynaecologists (M.R.C.O.G.), με εξειδίκευση στη λαπαροσκοπική, υστεροσκοπική και ρομποτική χειρουργική. '
+                 f'Το ιατρείο του βρίσκεται στη διεύθυνση {CLINIC_FULL}.</p>' + local
+                 + f'<p>Ο γιατρός καλύπτει τη γυναικολογική εξέταση και το test Pap, την κολποσκόπηση και τον έλεγχο για HPV, '
+                 f'την παρακολούθηση της εγκυμοσύνης και τις επεμβάσεις, που γίνονται στο {SITE["hospital"]}.</p>')
+        body = f"""<section class="th"><div class="wrap th__in"><div class="th__text">{crumb}
+  <p class="th__kicker">{html.escape(kicker)}</p>
+  <h1 class="th__title">{html.escape(h1)}</h1>
+  <p class="th__lead">{SITE['doctor']}, μαιευτήρας χειρουργός γυναικολόγος M.R.C.O.G. Ιατρείο: {CLINIC_FULL}. {SITE['hours_short']}.</p>
+  <div class="th__acts">
+    <a class="btn btn--blue btn--lg" href="tel:{SITE['phone_href']}">{U.I['phone']}{SITE['phone']}</a>
+    <a class="btn btn--ghost btn--lg" href="{html.escape(directions)}" rel="noopener" target="_blank">{U.I['pin']}Οδηγίες{'' if home else ' από ' + html.escape(a['acc'])}</a>
+    <button class="btn btn--ghost btn--lg" type="button" data-open="book">Φόρμα ραντεβού</button>
+  </div></div></div></section>
+<main id="main">
+  <section class="sec sec--tight"><div class="wrap prose" style="max-width:820px"><h2>Το ιατρείο</h2>{intro}</div></section>
+  <section class="sec sec--tight"><div class="wrap"><div class="sec__head"><h2>Θέματα που αντιμετωπίζει ο γιατρός</h2></div><div class="grid">{cards}</div>
+    <p style="margin-top:1rem"><a class="btn btn--ghost" href="../services/">Όλα τα θέματα</a></p></div></section>
+  <section class="sec sec--tight"><div class="wrap contact">
+    <div class="prose"><h2>Πώς θα έρθετε</h2>
+      <p>{'Το ιατρείο βρίσκεται στον Βύρωνα' if home else 'Από ' + html.escape(a['acc']) + ' το ιατρείο απέχει ' + a['km_text'] + ' σε ευθεία'}: {CLINIC_FULL}.
+      Με το κουμπί παρακάτω οι Χάρτες Google δείχνουν τη διαδρομή με αυτοκίνητο ή με τα μέσα μεταφοράς.</p>
+      <p><a class="btn btn--blue" href="{html.escape(directions)}" rel="noopener" target="_blank">{U.I['pin']}Διαδρομή προς το ιατρείο</a></p>
+      <h3>Κοντινές περιοχές</h3><div class="chips">{near}</div>
+      <p><a href="../gynaikologos-perioxes/">Όλες οι περιοχές</a></p>
+    </div>
+    <div><a class="contact__map" href="{SITE['map_url']}" rel="noopener" target="_blank">{U.pic('2023-04-screenshot-19.webp', 'Χάρτης: ιατρείο γυναικολόγου, ' + CLINIC_FULL, d)}<span>Άνοιγμα στους Χάρτες Google</span></a></div>
+  </div></section>
+  <section class="sec sec--tight"><div class="wrap prose" style="max-width:820px"><h2>Συχνές ερωτήσεις</h2>{faq_html}</div></section>
+  {U.cta_band(d)}
+</main>"""
+        url = f"{SITE['domain']}/{a['url']}"
+        page_ld = {"@context": "https://schema.org", "@type": "MedicalWebPage", "@id": url, "url": url, "name": h1,
+                   "inLanguage": "el", "about": {"@id": SITE["domain"] + "/#physician"},
+                   "mainEntity": {"@id": SITE["domain"] + "/#physician"},
+                   "spatialCoverage": {"@type": "Place", "name": a["name"],
+                                       "geo": {"@type": "GeoCoordinates", "latitude": a["lat"], "longitude": a["lng"]}}}
+        faq_ld_ = {"@context": "https://schema.org", "@type": "FAQPage", "@id": url + "#faq", "inLanguage": "el",
+                   "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": x}} for q, x in faq]}
+        title = f"Γυναικολόγος {a['name']} | Κ. Μυρίλλας, Μαιευτήρας"
+        desc = (f"Γυναικολόγος {'στον Βύρωνα' if home else 'κοντά ' + sto(a['acc'])}: {SITE['doctor']}, μαιευτήρας χειρουργός M.R.C.O.G. "
+                f"Ιατρείο {SITE['address']}, Βύρωνας. Ραντεβού {SITE['phone']}.")
+        write(f"{a['url']}index.html", shell(path=a["url"], title=title, desc=desc, depth=d, body=body,
+                                             jsonld=[page_ld, crumb_ld, faq_ld_]))
+        register(a["url"], "0.8")
+        index(a["url"], title=f"Γυναικολόγος {a['name']}", desc=kicker, kind="page",
+              kw=f"γυναικολογος {a['name']} περιοχη ιατρειο κοντα")
+
+    # σελίδα που τις συγκεντρώνει
+    d = 1
+    crumb, crumb_ld = U.crumbs([("Αρχική", ""), ("Περιοχές", None)], d)
+    rows = "".join(f'<li><a href="../{a["url"]}">Γυναικολόγος {html.escape(a["name"])}</a> <span style="color:var(--dim)">· '
+                   f'{"το ιατρείο είναι εδώ" if a["slug"] == "vyronas" else a["km_text"]}</span></li>' for a in AREA_PAGES)
+    body = f"""<section class="th"><div class="wrap th__in"><div class="th__text">{crumb}
+  <p class="th__kicker">Ιατρείο στον Βύρωνα</p>
+  <h1 class="th__title">Γυναικολόγος στην Ανατολική Αθήνα</h1>
+  <p class="th__lead">Το ιατρείο του μαιευτήρα χειρουργού γυναικολόγου {SITE['doctor']} βρίσκεται στη διεύθυνση {CLINIC_FULL}.
+    Εξυπηρετεί τον Βύρωνα και τις γύρω περιοχές της Αθήνας.</p>
+  <div class="th__acts"><a class="btn btn--blue btn--lg" href="tel:{SITE['phone_href']}">{U.I['phone']}{SITE['phone']}</a>
+    <a class="btn btn--ghost btn--lg" href="../epikinonia/">Επικοινωνία</a></div></div></div></section>
+<main id="main"><section class="sec sec--tight"><div class="wrap contact">
+  <div class="prose"><h2>Περιοχές κοντά στο ιατρείο</h2><p>Απόσταση σε ευθεία από το ιατρείο, κατά προσέγγιση.</p><ul>{rows}</ul></div>
+  <div><a class="contact__map" href="{SITE['map_url']}" rel="noopener" target="_blank">{U.pic('2023-04-screenshot-19.webp', 'Χάρτης: ' + CLINIC_FULL, d)}<span>Άνοιγμα στους Χάρτες Google</span></a></div>
+</div></section>{U.cta_band(d)}</main>"""
+    coll = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Γυναικολόγος στην Ανατολική Αθήνα",
+            "url": f"{SITE['domain']}/gynaikologos-perioxes/", "inLanguage": "el", "about": {"@id": SITE["domain"] + "/#physician"},
+            "mainEntity": {"@type": "ItemList", "itemListElement": [
+                {"@type": "ListItem", "position": k + 1, "url": f"{SITE['domain']}/{a['url']}", "name": f"Γυναικολόγος {a['name']}"}
+                for k, a in enumerate(AREA_PAGES)]}}
+    write("gynaikologos-perioxes/index.html", shell(path="gynaikologos-perioxes/",
+          title="Γυναικολόγος Ανατολική Αθήνα: περιοχές | Κ. Μυρίλλας",
+          desc=f"Ιατρείο γυναικολόγου στον Βύρωνα ({SITE['address']}) για Παγκράτι, Καισαριανή, Υμηττό, Ηλιούπολη, Ζωγράφου, Δάφνη και τις γύρω περιοχές.",
+          depth=d, body=body, jsonld=[crumb_ld, coll]))
+    register("gynaikologos-perioxes/", "0.7")
+    index("gynaikologos-perioxes/", title="Περιοχές", desc="Γυναικολόγος κοντά σας", kind="page", kw="περιοχες γυναικολογος κοντα")
+
+
 def build_404():
     d = 0
     body = f'''<section class="th"><div class="wrap th__in"><div class="th__text">
@@ -976,7 +1127,7 @@ def main():
     for a in ARTICLES:
         build_article(a)
     build_blog(); build_videos(); build_photos(); build_doctor(); build_contact(); build_testimonials()
-    build_guide_page(); build_mylist(); build_terms(); build_404()
+    build_guide_page(); build_mylist(); build_terms(); build_areas(); build_404()
     redirects(); sitemap()
     if "--relative" not in sys.argv:
         print(f"  absolute links in {absolutize()} files")
