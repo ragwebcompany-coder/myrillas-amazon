@@ -140,6 +140,9 @@ def poster(title, kicker="", color="#1399FF"):
 # ── head / chrome ────────────────────────────────────────────────────────────
 def head(*, title, desc, depth, canonical, jsonld=None, body_class="", og_image=None, kind="website", noindex=False):
     r = rel(depth)
+    desc = " ".join(desc.split())
+    if len(desc) > 158:  # η Google κόβει γύρω στους 155-160 χαρακτήρες
+        desc = desc[:157].rsplit(" ", 1)[0].rstrip(",.;:·–-") + "…"
     ld = "".join('<script type="application/ld+json">' + json.dumps(b, ensure_ascii=False, separators=(",", ":"))
                  + "</script>\n" for b in (jsonld or []))
     img_name = og_image or "og-default.jpg"

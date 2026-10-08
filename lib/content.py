@@ -405,6 +405,10 @@ def pretty_date(iso):
     return f"{int(d)} {MONTHS_GEN[int(m) - 1]} {y}"
 
 
-def seo_title(text, suffix=" | Κ. Μυρίλλας", cap=68):
-    text = text.strip()
-    return text if len(text) + len(suffix) > cap else text + suffix
+def seo_title(text, cap=64):
+    """Τίτλος σελίδας με το όνομα του γιατρού, όσο χωράει στο αποτέλεσμα της Google (~60 χαρακτήρες)."""
+    text = re.sub(r"\s*[|–-]\s*(kmyrillas\.gr|Κ\. Μυρίλλας)\s*$", "", text.strip())
+    for suffix in (" | Γυναικολόγος Κ. Μυρίλλας", " | Κ. Μυρίλλας"):
+        if len(text) + len(suffix) <= cap:
+            return text + suffix
+    return text

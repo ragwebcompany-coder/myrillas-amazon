@@ -5,6 +5,17 @@
   "cleanUrls": false,
   "redirects": [
     {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.kmyrillas.gr"
+        }
+      ],
+      "destination": "https://kmyrillas.gr/$1",
+      "permanent": true
+    },
+    {
       "source": "/dr-k-myrillas/",
       "destination": "/gynaikologos-dr-k-myrillas/",
       "permanent": true
@@ -27,6 +38,36 @@
     {
       "source": "/blog/page/:n/",
       "destination": "/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/sitemap_index.xml",
+      "destination": "/sitemap.xml",
+      "permanent": true
+    },
+    {
+      "source": "/page-sitemap.xml",
+      "destination": "/sitemap.xml",
+      "permanent": true
+    },
+    {
+      "source": "/post-sitemap.xml",
+      "destination": "/sitemap.xml",
+      "permanent": true
+    },
+    {
+      "source": "/feed/",
+      "destination": "/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/comments/feed/",
+      "destination": "/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/author/:n/",
+      "destination": "/gynaikologos-dr-k-myrillas/",
       "permanent": true
     }
   ],
@@ -59,6 +100,21 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<sub>.*)\\.vercel\\.app"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
         }
       ]
     }

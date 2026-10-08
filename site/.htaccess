@@ -1,7 +1,16 @@
 RewriteEngine On
+RewriteCond %{HTTPS} off [OR]
+RewriteCond %{HTTP_HOST} ^www\. [NC]
+RewriteRule ^ https://kmyrillas.gr%{REQUEST_URI} [R=301,L]
 Redirect 301 /dr-k-myrillas /gynaikologos-dr-k-myrillas/
 Redirect 301 /newsletter /
 Redirect 301 /robotiki-xeirourgiki /services/robotiki-xeirourgiki/
 Redirect 301 /testimonials /
-RewriteRule ^blog/page/[0-9]+/?$ /blog/ [R=301,L]
+RewriteRule ^blog/page/[^/]+/?$ /blog/ [R=301,L]
+Redirect 301 /sitemap_index.xml /sitemap.xml
+Redirect 301 /page-sitemap.xml /sitemap.xml
+Redirect 301 /post-sitemap.xml /sitemap.xml
+Redirect 301 /feed /blog/
+Redirect 301 /comments/feed /blog/
+RewriteRule ^author/[^/]+/?$ /gynaikologos-dr-k-myrillas/ [R=301,L]
 ErrorDocument 404 /404.html

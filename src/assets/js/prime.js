@@ -8,7 +8,7 @@ var D = document, W = window, root = D.documentElement;
 var $ = function (s, c) { return (c || D).querySelector(s); };
 var $$ = function (s, c) { return Array.prototype.slice.call((c || D).querySelectorAll(s)); };
 var depth = +(D.body.dataset.depth || 0);
-var base = depth ? new Array(depth + 1).join("../") : "";
+var base = D.body.dataset.base || (depth ? new Array(depth + 1).join("../") : "");
 var reduced = W.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 var K = { list: "prime:list", prog: "prime:progress", profile: "prime:profile", motion: "prime:motion",

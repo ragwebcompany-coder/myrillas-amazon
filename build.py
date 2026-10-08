@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Χτίζει το kmyrillas.gr (Prime Video theme) μέσα στο site/.
 
-    python3 build.py
+    python3 build.py               # παραγωγή: links https://kmyrillas.gr/…, assets /assets/…
+    python3 build.py --relative    # προεπισκόπηση από file:// ή υποφάκελο
 
 Χρειάζεται μόνο Python 3. Αν υπάρχει Pillow, παράγει και webp / μικρότερες εικόνες.
 Τα URL μένουν ίδια με το παλιό WordPress site (services/<slug>/, <slug>/ για άρθρα,
@@ -327,7 +328,7 @@ def build_service(s):
     meta_desc = (s["meta"] or s["lead"])[:158]
     xray = service_xray(s, eps)
     write(f"services/{slug}/index.html",
-          shell(path=f"services/{slug}/", title=s["seo_title"] or C.seo_title(s["title"]), desc=meta_desc, depth=d,
+          shell(path=f"services/{slug}/", title=C.seo_title(s["seo_title"] or s["title"]), desc=meta_desc, depth=d,
                 body=body, active=cat["slug"] if cat["slug"] in ("maieftiki", "gynaikologia", "xeirourgiki") else "services",
                 jsonld=[x for x in (service_ld(s, eps), crumb_ld, faq_ld(slug)) if x], og_image=s["image"], kind="article",
                 page_meta={"t": s["title"], "u": f"services/{slug}/", "img": s["image"], "k": f"{s['kind']} · {cat['title']}"}))
@@ -442,7 +443,7 @@ def build_article(a):
                       ["Δημοσίευση", pretty_date(r["pub"])], ["Συγγραφέας", SITE["doctor"]]],
             "eps": [t for t, _ in eps][:12], "videos": [[v, VID[v]["title"]] for v in r["videos"] if v in VID][:5],
             "rel": [[f"services/{s['slug']}/", s["title"]] for s in svc_hits[:4]]}
-    write(f"{slug}/index.html", shell(path=f"{slug}/", title=r["seo_title"] or C.seo_title(a["title"]),
+    write(f"{slug}/index.html", shell(path=f"{slug}/", title=C.seo_title(r["seo_title"] or a["title"]),
           desc=(r["meta"] or r["lead"])[:158], depth=d, body=body, active="blog", jsonld=[ld, crumb_ld],
           og_image=r["image"], kind="article",
           canonical=f"services/{twin}/" if twin and twin in SVC else None,
@@ -477,7 +478,7 @@ def build_blog():
   <div class="grid" data-filter-grid>{items}</div>
   <p data-filter-empty hidden style="color:var(--dim);margin-top:2rem">Καμία αντιστοιχία.</p>
 </div></section>{U.cta_band(d)}</main>'''
-    write("blog/index.html", shell(path="blog/", title="Άρθρα | Κ. Μυρίλλας",
+    write("blog/index.html", shell(path="blog/", title="Άρθρα για εγκυμοσύνη & γυναικολογία | Κ. Μυρίλλας",
           desc="53 άρθρα του μαιευτήρα χειρουργού γυναικολόγου Κωνσταντίνου Μυρίλλα για την εγκυμοσύνη, τη γυναικολογία, τις εξετάσεις και τη γονιμότητα.",
           depth=d, body=body, active="blog", jsonld=[crumb_ld]))
     register("blog/", "0.7", "weekly")
@@ -546,7 +547,7 @@ def build_photos():
   <section class="sec sec--tight"><div class="wrap"><div class="sec__head"><h2>Ο γιατρός</h2></div><div class="gal">{doc}</div></div></section>
   {U.cta_band(d)}
 </main>'''
-    write("photo-gallery/index.html", shell(path="photo-gallery/", title="Gallery | Κ. Μυρίλλας",
+    write("photo-gallery/index.html", shell(path="photo-gallery/", title="Φωτογραφίες & Τύπος | Γυναικολόγος Κ. Μυρίλλας",
           desc="Δημοσιεύσεις στον Τύπο, στιγμιότυπα από χειρουργεία και ο μαιευτήρας χειρουργός γυναικολόγος Κωνσταντίνος Μυρίλλας.",
           depth=d, body=body, active="", jsonld=[crumb_ld]))
     register("photo-gallery/", "0.4")
@@ -800,30 +801,92 @@ def assets():
 
 def redirects():
     old = [("/dr-k-myrillas/", "/gynaikologos-dr-k-myrillas/"), ("/newsletter/", "/"), ("/robotiki-xeirourgiki/", "/services/robotiki-xeirourgiki/"),
-           ("/testimonials/", "/"), ("/blog/page/:n/", "/blog/")]
+           ("/testimonials/", "/"), ("/blog/page/:n/", "/blog/"),
+           # παλιά URL του WordPress που είχε ήδη η Google
+           ("/sitemap_index.xml", "/sitemap.xml"), ("/page-sitemap.xml", "/sitemap.xml"), ("/post-sitemap.xml", "/sitemap.xml"),
+           ("/feed/", "/blog/"), ("/comments/feed/", "/blog/"), ("/author/:n/", "/gynaikologos-dr-k-myrillas/")]
     with open(os.path.join(OUT, "_redirects"), "w") as f:
         for a, b in old:
             f.write(f"{a.replace(':n', '*')}  {b}  301\n")
     with open(os.path.join(OUT, ".htaccess"), "w") as f:
-        f.write("RewriteEngine On\n")
+        f.write("RewriteEngine On\n"
+                "RewriteCond %{HTTPS} off [OR]\nRewriteCond %{HTTP_HOST} ^www\\. [NC]\n"
+                "RewriteRule ^ https://kmyrillas.gr%{REQUEST_URI} [R=301,L]\n")
         for a, b in old:
             if ":n" in a:
-                f.write(f"RewriteRule ^blog/page/[0-9]+/?$ /blog/ [R=301,L]\n")
+                f.write(f"RewriteRule ^{a.strip('/').replace(':n', '[^/]+')}/?$ {b} [R=301,L]\n")
             else:
                 f.write(f"Redirect 301 {a.rstrip('/')} {b}\n")
         f.write("ErrorDocument 404 /404.html\n")
     vercel = {"$schema": "https://openapi.vercel.sh/vercel.json", "outputDirectory": "site",
               "trailingSlash": True, "cleanUrls": False,
-              "redirects": [{"source": a, "destination": b, "permanent": True} for a, b in old],
+              # www → kmyrillas.gr, ώστε η Google να βλέπει ένα μόνο domain
+              "redirects": [{"source": "/(.*)", "has": [{"type": "host", "value": "www.kmyrillas.gr"}],
+                             "destination": "https://kmyrillas.gr/$1", "permanent": True}]
+                           + [{"source": a, "destination": b, "permanent": True} for a, b in old],
               "headers": [{"source": "/assets/(img|docs)/(.*)", "headers": [{"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}]},
                           {"source": "/assets/(css|js)/(.*)", "headers": [{"key": "Cache-Control", "value": "public, max-age=86400, must-revalidate"}]},
                           {"source": "/(.*)", "headers": [{"key": "X-Content-Type-Options", "value": "nosniff"},
-                                                          {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"}]}]}
+                                                          {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"}]},
+                          # το *.vercel.app αντίγραφο δεν πρέπει να ευρετηριαστεί δίπλα στο kmyrillas.gr
+                          {"source": "/(.*)", "has": [{"type": "host", "value": "(?<sub>.*)\\.vercel\\.app"}],
+                           "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}]}]}
     # Το vercel.json γράφεται στη ρίζα του repo (όχι μέσα στο site/), γιατί το Vercel project
     # χτίζει με Root Directory = repo root· το outputDirectory δείχνει πού είναι το πραγματικό site.
     with open(os.path.join(HERE, "vercel.json"), "w", encoding="utf-8") as f:
         json.dump(vercel, f, ensure_ascii=False, indent=2)
         f.write("\n")
+
+
+ATTR = re.compile(r'\b(href|src|srcset|data-lb|poster)="([^"]*)"')
+
+
+def absolutize():
+    """Όλα τα εσωτερικά links γίνονται https://kmyrillas.gr/…, τα αρχεία (εικόνες, css, js, pdf) /assets/….
+
+    Τα σχετικά (../) URL μένουν στην πηγή για να χτίζεται απλά· εδώ λύνονται ως προς τη θέση κάθε σελίδας.
+    Τα assets μένουν root-relative ώστε ένα preview σε άλλο host να φορτώνει σωστά τα δικά του αρχεία.
+    """
+    from urllib.parse import urljoin
+    dom = SITE["domain"]
+
+    def fix(page, val, attr):
+        v = val.strip() or "./"
+        if v.startswith(("http:", "https:", "//", "#", "mailto:", "tel:", "data:", "javascript:", "sms:")):
+            return val
+        path = urljoin(page, v)
+        if path.endswith("/index.html"):
+            path = path[:-len("index.html")]
+        if path.startswith("/assets/") or path.endswith((".json", ".xml", ".txt", ".pdf")) or attr != "href":
+            return path
+        return dom + path
+
+    n = 0
+    for dp, _, fs in os.walk(OUT):
+        for f in fs:
+            if not f.endswith(".html"):
+                continue
+            full = os.path.join(dp, f)
+            page = "/" + os.path.relpath(full, OUT).replace(os.sep, "/")
+            if f == "404.html":
+                page = "/"
+            with open(full, encoding="utf-8") as fh:
+                src = fh.read()
+
+            def sub(m):
+                attr, val = m.group(1), m.group(2)
+                if attr == "srcset":
+                    val = ", ".join(" ".join([fix(page, part.split()[0], attr)] + part.split()[1:])
+                                    for part in val.split(",") if part.strip())
+                else:
+                    val = fix(page, val, attr)
+                return f'{attr}="{val}"'
+            out = ATTR.sub(sub, src)
+            out = re.sub(r'<body([^>]*) data-depth="\d+"', r'<body\1 data-depth="0" data-base="/"', out, count=1)
+            with open(full, "w", encoding="utf-8") as fh:
+                fh.write(out)
+            n += 1
+    return n
 
 
 def sitemap():
@@ -860,6 +923,8 @@ def main():
     build_blog(); build_videos(); build_photos(); build_doctor(); build_contact(); build_testimonials()
     build_guide_page(); build_mylist(); build_terms(); build_404()
     redirects(); sitemap()
+    if "--relative" not in sys.argv:
+        print(f"  absolute links in {absolutize()} files")
     print(f"  {len(PAGES)} pages, {len(SEARCH)} search rows → {OUT}")
 
 

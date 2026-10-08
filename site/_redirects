@@ -3,3 +3,9 @@
 /robotiki-xeirourgiki/  /services/robotiki-xeirourgiki/  301
 /testimonials/  /  301
 /blog/page/*/  /blog/  301
+/sitemap_index.xml  /sitemap.xml  301
+/page-sitemap.xml  /sitemap.xml  301
+/post-sitemap.xml  /sitemap.xml  301
+/feed/  /blog/  301
+/comments/feed/  /blog/  301
+/author/*/  /gynaikologos-dr-k-myrillas/  301
