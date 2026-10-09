@@ -635,7 +635,6 @@ def cta_band(depth, *, title="Μιλήστε με τον γιατρό",
 # ── overlays ─────────────────────────────────────────────────────────────────
 def overlays(depth):
     r = rel(depth)
-    topics = "".join(f'<option value="{html.escape(s["title"])}">{html.escape(s["title"])}</option>' for s in SERVICES)
     hours = "".join(f"<li><span>{d}</span><b>{h}</b></li>" for d, h in SITE["hours"])
     profs = "".join(f'''<button class="who__p" type="button" data-profile="{pid}" data-name="{name}" data-color="{color}" data-cats="{",".join(cats)}">
       <span class="who__av" style="--pc:{color}">{name[0]}</span><span>{name}</span></button>''' for pid, name, color, cats in PROFILES)
@@ -702,36 +701,16 @@ def overlays(depth):
     <div class="bk__side">
       <p class="th__kicker">Ραντεβού</p>
       <h2 id="bk-title">Ζητήστε ραντεβού</h2>
-      <p>Η φόρμα δεν στέλνει τίποτα μόνη της: ετοιμάζει ένα email που ελέγχετε πριν φύγει. Για άμεση εξυπηρέτηση, καλέστε.</p>
+      <p>Κλείστε ραντεβού τηλεφωνικά, τις ώρες λειτουργίας του ιατρείου.</p>
       <ul class="bk__hours">{hours}</ul>
       <p class="bk__nap">{I['pin']}<span>{SITE['address']}, {SITE['locality']}</span></p>
       <p class="bk__nap">{I['phone']}<span><a href="tel:{SITE['phone_href']}">{SITE['phone']}</a> · <a href="tel:{SITE['mobile_href']}">{SITE['mobile']}</a></span></p>
-    </div>
-    <form class="bk__form" novalidate>
-      <div class="fld"><label for="bk-name">Ονοματεπώνυμο</label>
-        <input id="bk-name" name="name" autocomplete="name" required><p class="err">Συμπληρώστε το όνομά σας.</p></div>
-      <div class="fld fld--2">
-        <div><label for="bk-phone">Τηλέφωνο</label><input id="bk-phone" name="phone" type="tel" autocomplete="tel" required>
-          <p class="err">Χρειαζόμαστε έναν τρόπο να σας βρούμε.</p></div>
-        <div><label for="bk-mail">Email <i>προαιρετικό</i></label><input id="bk-mail" name="email" type="email" autocomplete="email"></div>
-      </div>
-      <div class="fld"><label for="bk-topic">Θέμα</label>
-        <select id="bk-topic" name="topic"><option value="">Δεν είμαι σίγουρη</option>{topics}</select></div>
-      <div class="fld fld--2">
-        <div><label for="bk-date">Προτιμώμενη ημέρα</label><input id="bk-date" name="date" type="date">
-          <p class="err" data-closed>Το ιατρείο δέχεται Δευτέρα, Τετάρτη και Πέμπτη 17:00 – 21:30. Άλλες ημέρες κατόπιν συνεννόησης.</p></div>
-        <div><label for="bk-time">Ώρα</label><select id="bk-time" name="time"><option value="">Επιλέξτε ώρα</option></select></div>
-      </div>
-      <div class="fld"><label for="bk-note">Θέλετε να μας πείτε κάτι ακόμη;</label>
-        <textarea id="bk-note" name="note" rows="3" placeholder="Ό,τι μας βοηθά να προετοιμαστούμε."></textarea></div>
-      <label class="chk"><input type="checkbox" name="consent" required><span></span>
-        <em>Επιτρέπω να χρησιμοποιήσετε τα στοιχεία μου για να επικοινωνήσετε μαζί μου. Διάβασα τους <a href="{r}oroi-chrisis/">όρους χρήσης</a>.</em></label>
-      <p class="err err--consent">Χρειαζόμαστε τη συγκατάθεσή σας.</p>
+      <p class="bk__nap">{I['mail']}<span><a href="mailto:{SITE['email']}">{SITE['email']}</a></span></p>
       <div class="bk__acts">
-        <button class="btn btn--ghost" type="button" data-close>Άκυρο</button>
-        <button class="btn btn--blue" type="submit">Ετοιμάστε το email</button>
+        <a class="btn btn--blue" href="tel:{SITE['phone_href']}">{I['phone']}{SITE['phone']}</a>
+        <a class="btn btn--ghost" href="tel:{SITE['mobile_href']}">{I['phone']}{SITE['mobile']}</a>
       </div>
-    </form>
+    </div>
   </div>
 </div>
 

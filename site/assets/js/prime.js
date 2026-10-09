@@ -466,36 +466,6 @@ $$("[data-tabs]").forEach(function (t) {
   });
 });
 
-/* ── booking (mailto composer) ───────────────────────────── */
-(function booking() {
-  var form = $(".bk__form"); if (!form) return;
-  var dateI = $("#bk-date"), timeI = $("#bk-time"), closed = $("[data-closed]");
-  var today = new Date(); today.setHours(0, 0, 0, 0);
-  if (dateI) dateI.min = today.toISOString().slice(0, 10);
-  function slots() {
-    if (!dateI || !timeI) return;
-    var v = dateI.value; timeI.innerHTML = '<option value="">Επιλέξτε ώρα</option>'; if (!v) return;
-    var day = new Date(v + "T00:00:00").getDay(), open = day === 1 || day === 3 || day === 4;
-    if (closed) closed.classList.toggle("is-on", !open);
-    for (var t = 17; t <= 21; t += .5) {
-      var hh = Math.floor(t), mm = t % 1 ? "30" : "00", o = D.createElement("option");
-      o.value = o.textContent = hh + ":" + mm; timeI.appendChild(o);
-    }
-  }
-  if (dateI) dateI.addEventListener("change", slots);
-  form.addEventListener("submit", function (e) {
-    e.preventDefault(); var ok = true;
-    ["name", "phone"].forEach(function (n) { var el = form.elements[n], bad = !el.value.trim(); el.parentElement.classList.toggle("is-bad", bad); if (bad) ok = false; });
-    var consent = form.elements.consent; $(".err--consent").classList.toggle("is-on", !consent.checked); if (!consent.checked) ok = false;
-    if (!ok) { toast("Ελέγξτε τα σημειωμένα πεδία"); return; }
-    var f = form.elements, lines = ["Ονοματεπώνυμο: " + f.name.value.trim(), "Τηλέφωνο: " + f.phone.value.trim(),
-      f.email.value.trim() ? "Email: " + f.email.value.trim() : "", "Θέμα: " + (f.topic.value || "δεν είμαι σίγουρη"),
-      f.date.value ? "Προτίμηση: " + f.date.value + (f.time.value ? " " + f.time.value : "") : "", "", f.note.value.trim()].filter(Boolean).join("\n");
-    location.href = "mailto:web@kmyrillas.gr?subject=" + encodeURIComponent("Αίτημα ραντεβού: " + f.name.value.trim()) + "&body=" + encodeURIComponent(lines);
-    toast("Ανοίγει το πρόγραμμα email σας");
-  });
-})();
-
 /* ── guide: τι με αφορά ──────────────────────────────────── */
 (function guide() {
   var g = $("[data-guide]"); if (!g) return;
